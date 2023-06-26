@@ -5,9 +5,12 @@ package api
 import "C"
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"runtime"
 	"syscall"
+	"unsafe"
 
 	"github.com/CosmWasm/wasmvm/types"
 )
@@ -205,6 +208,23 @@ func Execute(
 	q := buildQuerier(querier)
 	var gasUsed cu64
 	errmsg := newUnmanagedVector(nil)
+
+	// just for test
+	var envs types.Env
+	err := json.Unmarshal(env, &envs)
+	if err != nil {
+		panic(fmt.Sprintln("for test json Unmarshal env", err))
+	}
+
+	if GenerateCallerInfoFunc != nil {
+		fmt.Println("the address of pointer", &querier, q.state)
+		codeHash, _, qhandler := GenerateCallerInfoFunc(unsafe.Pointer((q.state)), envs.Contract.Address)
+		if len(codeHash) != 0 {
+			fmt.Println("codeHash", hex.EncodeToString(codeHash), "GasConsumed", qhandler.GasConsumed())
+		}
+	} else {
+		panic("GenerateCallerInfoFunc is nil")
+	}
 
 	res, err := C.execute(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
