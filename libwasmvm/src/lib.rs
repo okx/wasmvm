@@ -20,10 +20,12 @@ mod version;
 // We keep them here such that we can access them in the docs (`cargo doc`).
 pub use api::GoApi;
 pub use cache::{cache_t, load_wasm};
-pub use db::{db_t, Db};
+//pub use db::{db_t, Db};
 pub use error::GoError;
 pub use memory::{
     destroy_unmanaged_vector, new_unmanaged_vector, ByteSliceView, U8SliceView, UnmanagedVector,
 };
-pub use querier::GoQuerier;
+//pub use querier::GoQuerier;
 pub use storage::GoStorage;
+pub use crate::db::{db_t, Db};
+pub use crate::querier::{GoQuerier};

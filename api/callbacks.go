@@ -17,6 +17,8 @@ typedef GoError (*next_db_fn)(iterator_t idx, gas_meter_t *gas_meter, uint64_t *
 typedef GoError (*humanize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 typedef GoError (*canonicalize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 typedef GoError (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
+typedef GoError (*generate_call_info_fn)(querier_t *ptr, char *contractAddress, char **resCodeHash, struct Db *resStore, struct GoQuerier *resQuerier);
+
 
 // forward declarations (db)
 GoError cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *val, UnmanagedVector *errOut);
@@ -30,7 +32,7 @@ GoError cHumanAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, Un
 GoError cCanonicalAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 // and querier
 GoError cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
-
+GoError cGenerateCallInfo_cgo(querier_t *ptr, char *contractAddress, char **resCodeHash, Db *resStore, GoQuerier *resQuerier);
 
 */
 import "C"
@@ -136,9 +138,10 @@ type DBState struct {
 }
 
 // use this to create C.Db in two steps, so the pointer lives as long as the calling stack
-//   state := buildDBState(kv, callID)
-//   db := buildDB(&state, &gasMeter)
-//   // then pass db into some FFI function
+//
+//	state := buildDBState(kv, callID)
+//	db := buildDB(&state, &gasMeter)
+//	// then pass db into some FFI function
 func buildDBState(kv KVStore, callID uint64) DBState {
 	return DBState{
 		Store:  kv,
@@ -423,7 +426,8 @@ func cCanonicalAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector,
 /****** Go Querier ********/
 
 var querier_vtable = C.Querier_vtable{
-	query_external: (C.query_external_fn)(C.cQueryExternal_cgo),
+	query_external:     (C.query_external_fn)(C.cQueryExternal_cgo),
+	generate_call_info: (C.generate_call_info_fn)(C.cGenerateCallInfo_cgo),
 }
 
 // contract: original pointer/struct referenced must live longer than C.GoQuerier struct
@@ -463,5 +467,12 @@ func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, 
 		return C.GoError_CannotSerialize
 	}
 	*result = newUnmanagedVector(bz)
+	return C.GoError_None
+}
+
+//export cGenerateCallInfo
+func cGenerateCallInfo(ptr *C.querier_t, contractAddress *C.char, resCodeHash **C.char, resStore *C.Db, result *C.GoQuerier) (ret C.GoError) {
+	defer recoverPanic(&ret)
+	GenerateCallerInfo(unsafe.Pointer(ptr), contractAddress, resCodeHash, resStore, result)
 	return C.GoError_None
 }

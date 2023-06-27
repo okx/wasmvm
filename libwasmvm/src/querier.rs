@@ -1,8 +1,12 @@
+use std::any::Any;
 use cosmwasm_std::{Binary, ContractResult, SystemError, SystemResult};
 use cosmwasm_vm::{BackendResult, GasInfo, Querier};
 
 use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
+use std::os::raw::{c_char, c_void};
+use crate::db::Db;
+use std::ffi::{CStr, CString};
 
 // this represents something passed in from the caller side of FFI
 #[repr(C)]
@@ -22,6 +26,13 @@ pub struct Querier_vtable {
         U8SliceView,
         *mut UnmanagedVector, // result output
         *mut UnmanagedVector, // error message output
+    ) -> i32,
+    pub generate_call_info: extern "C" fn (
+        *const querier_t,
+        contractAddress: *mut c_char,
+        resCodeHash: *mut *mut c_char,
+        resStore: *mut Db,
+        resQuerier: *mut GoQuerier,
     ) -> i32,
 }
 
@@ -79,5 +90,67 @@ impl Querier for GoQuerier {
             }))
         });
         (result, gas_info)
+    }
+
+    fn generate_call_info(&self, contract_address: String) -> [u8; 32] {
+        let c_string = CString::new(contract_address).expect("Failed to create CString");
+        let c_string_ptr = c_string.into_raw() as *mut c_char;
+
+        let mut res_code_hash: *mut c_char = std::ptr::null_mut();
+        let mut res_store: *mut Db = std::ptr::null_mut();
+        let mut res_querier: *mut GoQuerier = std::ptr::null_mut();
+
+        let go_result: GoError = (self.vtable.generate_call_info)(
+            self.state,
+            c_string_ptr,
+            &mut res_code_hash,
+            *&mut res_store,
+            *&mut res_querier,
+        ).into();
+
+        // 释放c_string_ptr
+        unsafe {
+            let _ = CString::from_raw(c_string_ptr);
+        }
+
+        let mut byte_array: [u8; 32] = [0; 32];
+
+        if !res_code_hash.is_null() && !res_store.is_null() && !res_querier.is_null() {
+            let c_str = unsafe { CStr::from_ptr(res_code_hash) };
+            let byte_slice = c_str.to_bytes();
+            byte_array.copy_from_slice(&byte_slice[..32]);
+            //
+            let res_store_owned = unsafe { Box::from_raw(res_store) };
+
+            // TODO 释放资源
+            // unsafe {
+            //     // 释放 res_code_hash
+            //     if !res_code_hash.is_null() {
+            //         libc::free(res_code_hash as *mut libc::c_void);
+            //     }
+            //
+            //     // 释放 res_store
+            //     if !res_store.is_null() {
+            //         libc::free(res_store);
+            //     }
+            //
+            //     // 释放 res_querier
+            //     if !res_querier.is_null() {
+            //         libc::free(res_querier);
+            //     }
+            //
+            //     // 释放 res_gas_meter
+            //     if !res_gas_meter.is_null() {
+            //         libc::free(res_gas_meter);
+            //     }
+            // }
+            return byte_array
+        } else {
+            // TODO the else
+            return byte_array
+        }
+    }
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }

@@ -296,6 +296,7 @@ typedef struct querier_t {
 
 typedef struct Querier_vtable {
   int32_t (*query_external)(const struct querier_t*, uint64_t, uint64_t*, struct U8SliceView, struct UnmanagedVector*, struct UnmanagedVector*);
+  int32_t (*generate_call_info)(const struct querier_t*, char *contractAddress, char **resCodeHash, struct Db *resStore, struct GoQuerier *resQuerier);
 } Querier_vtable;
 
 typedef struct GoQuerier {
