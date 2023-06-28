@@ -1,12 +1,13 @@
 use std::any::Any;
 use cosmwasm_std::{Binary, ContractResult, SystemError, SystemResult};
-use cosmwasm_vm::{BackendResult, GasInfo, Querier};
+use cosmwasm_vm::{BackendResult, GasInfo, Querier, Storage};
 
 use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
 use std::os::raw::{c_char, c_void};
 use crate::db::Db;
 use std::ffi::{CStr, CString};
+use crate::storage::GoStorage;
 
 // this represents something passed in from the caller side of FFI
 #[repr(C)]
@@ -92,7 +93,7 @@ impl Querier for GoQuerier {
         (result, gas_info)
     }
 
-    fn generate_call_info(&self, contract_address: String) -> [u8; 32] {
+    fn generate_call_info(&self, contract_address: String) -> ([u8; 32], Box<dyn Querier>, Box<dyn Storage>) {
         println!("wasmvm generate_call_info contract_address: {:?}", contract_address);
         let c_string = CString::new(contract_address).expect("Failed to create CString");
         let c_string_ptr = c_string.into_raw() as *mut c_char;
@@ -115,20 +116,22 @@ impl Querier for GoQuerier {
         }
 
         let mut byte_array: [u8; 32] = [0; 32];
-        if !res_code_hash.is_null(){
+        // if !res_code_hash.is_null(){
+        //     let c_str = unsafe { CStr::from_ptr(res_code_hash) };
+        //     let byte_slice = c_str.to_bytes();
+        //     byte_array.copy_from_slice(&byte_slice[..32]);
+        //     let querier_box: Box<dyn Querier> = Box::new(unsafe { *Box::from_raw(res_querier) });
+        //     let storage_box: Box<dyn Storage> = Box::new(GoStorage::new(unsafe { *Box::from_raw(res_store) }));
+        //     return (byte_array, querier_box, storage_box);
+        // }
+
+        //if !res_code_hash.is_null() && !res_store.is_null() && !res_querier.is_null() {
             let c_str = unsafe { CStr::from_ptr(res_code_hash) };
             let byte_slice = c_str.to_bytes();
             byte_array.copy_from_slice(&byte_slice[..32]);
-            return byte_array
-        }
 
-
-        if !res_code_hash.is_null() && !res_store.is_null() && !res_querier.is_null() {
-            let c_str = unsafe { CStr::from_ptr(res_code_hash) };
-            let byte_slice = c_str.to_bytes();
-            byte_array.copy_from_slice(&byte_slice[..32]);
-            //
-            let res_store_owned = unsafe { Box::from_raw(res_store) };
+            let querier_box: Box<dyn Querier> = Box::new(unsafe { *Box::from_raw(res_querier) });
+            let storage_box: Box<dyn Storage> = Box::new(GoStorage::new(unsafe { *Box::from_raw(res_store) }));
 
             // TODO 释放资源
             // unsafe {
@@ -152,13 +155,12 @@ impl Querier for GoQuerier {
             //         libc::free(res_gas_meter);
             //     }
             // }
-            return byte_array
-        } else {
-            // TODO the else
-            return byte_array
-        }
+            return (byte_array, querier_box, storage_box)
+        // } else {
+        //     unreachable!("generate_call_info: do not run into this case");
+        // }
     }
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
 }
