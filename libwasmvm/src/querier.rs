@@ -1,6 +1,7 @@
 use std::any::Any;
 use cosmwasm_std::{Binary, ContractResult, SystemError, SystemResult};
 use cosmwasm_vm::{BackendResult, GasInfo, Querier, Storage};
+use cosmwasm_std::{Order, Record};
 
 use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
@@ -8,6 +9,7 @@ use std::os::raw::{c_char, c_void};
 use crate::db::Db;
 use std::ffi::{CStr, CString};
 use crate::storage::GoStorage;
+use std::panic;
 
 // this represents something passed in from the caller side of FFI
 #[repr(C)]
@@ -18,6 +20,7 @@ pub struct querier_t {
 
 #[repr(C)]
 #[derive(Clone)]
+#[derive(Debug)]
 pub struct Querier_vtable {
     // We return errors through the return buffer, but may return non-zero error codes on panic
     pub query_external: extern "C" fn(
@@ -32,13 +35,14 @@ pub struct Querier_vtable {
         *const querier_t,
         *mut c_char,
         *mut *mut c_char,
-        *mut Db,
-        *mut GoQuerier,
+        *mut *mut Db,
+        *mut *mut GoQuerier,
     ) -> i32,
 }
 
 #[repr(C)]
 #[derive(Clone)]
+#[derive(Debug)]
 pub struct GoQuerier {
     pub state: *const querier_t,
     pub vtable: Querier_vtable,
@@ -106,8 +110,8 @@ impl Querier for GoQuerier {
             self.state,
             c_string_ptr,
             &mut res_code_hash,
-            *&mut res_store,
-            *&mut res_querier,
+            &mut res_store,
+            &mut res_querier,
         ).into();
 
         // 释放c_string_ptr
@@ -115,23 +119,70 @@ impl Querier for GoQuerier {
             let _ = CString::from_raw(c_string_ptr);
         }
 
+        if res_store.is_null() {
+            println!("wasmvm generate_call_info res_store is null");
+        }
+
+        if res_querier.is_null() {
+            println!("wasmvm generate_call_info res_querier is null");
+        }
+
+
         let mut byte_array: [u8; 32] = [0; 32];
+        // if !res_code_hash.is_null(){
+            let c_str = unsafe { CStr::from_ptr(res_code_hash) };
+            let byte_slice = c_str.to_bytes();
+            byte_array.copy_from_slice(&byte_slice[..32]);
+            // let querier_box: Box<dyn Querier> = Box::new(unsafe { *Box::from_raw(res_querier) });
+            // let storage_box: Box<dyn Storage> = Box::new(GoStorage::new(unsafe { *Box::from_raw(res_store) }));
+
+            //let querier_box: Box<dyn Querier> = unsafe { Box::new((*res_querier)) };
+            //let storage_box: Box<dyn Storage> = Box::new(GoStorage::new(unsafe { *Box::from_raw(res_store) }));
+
+            let querier_box = Box::new(unsafe{(*res_querier).clone()});
+            let storage_box = Box::new(GoStorage::new(unsafe { (*res_store).clone() }));
+            //let querier_box = Box::new(GoQuerier1::default());
+            //let storage_box = Box::new(GoStorage1::default());
+            return (byte_array, querier_box, storage_box);
+        // }
+
+        // let mut byte_array: [u8; 32] = [0; 32];
         // if !res_code_hash.is_null(){
         //     let c_str = unsafe { CStr::from_ptr(res_code_hash) };
         //     let byte_slice = c_str.to_bytes();
         //     byte_array.copy_from_slice(&byte_slice[..32]);
-        //     let querier_box: Box<dyn Querier> = Box::new(unsafe { *Box::from_raw(res_querier) });
-        //     let storage_box: Box<dyn Storage> = Box::new(GoStorage::new(unsafe { *Box::from_raw(res_store) }));
-        //     return (byte_array, querier_box, storage_box);
+        // }
+        //
+        // let storage_box = Box::new(GoStorage1::default());
+        // //let querier_box = Box::new(GoQuerier1::default());
+        // let mut  querier_box: Box<dyn Querier>;
+        // let result = panic::catch_unwind(|| {
+        //     querier_box = unsafe { Box::from_raw(res_querier) };
+        // });
+        //
+        // match result {
+        //     Ok(_) => {
+        //         println!("Panic not occurred");
+        //         return (byte_array, querier_box, storage_box);
+        //     }
+        //     Err(_) => {
+        //         println!("Panic occurred and caught");
+        //         querier_box = Box::new(GoQuerier1::default());
+        //         return (byte_array, querier_box, storage_box);
+        //     }
         // }
 
-        //if !res_code_hash.is_null() && !res_store.is_null() && !res_querier.is_null() {
-            let c_str = unsafe { CStr::from_ptr(res_code_hash) };
-            let byte_slice = c_str.to_bytes();
-            byte_array.copy_from_slice(&byte_slice[..32]);
-
-            let querier_box: Box<dyn Querier> = Box::new(unsafe { *Box::from_raw(res_querier) });
-            let storage_box: Box<dyn Storage> = Box::new(GoStorage::new(unsafe { *Box::from_raw(res_store) }));
+        // //if !res_code_hash.is_null() && !res_store.is_null() && !res_querier.is_null() {
+        //     let c_str = unsafe { CStr::from_ptr(res_code_hash) };
+        //     let byte_slice = c_str.to_bytes();
+        //     byte_array.copy_from_slice(&byte_slice[..32]);
+        //
+        //     //let querier_box: Box<dyn Querier> = Box::new(unsafe { *Box::from_raw(res_querier) });
+        //     //let storage_box: Box<dyn Storage> = Box::new(GoStorage::new(unsafe { *Box::from_raw(res_store) }));
+        //
+        // let querier_box = Box::new(GoQuerier1::default());
+        // let storage_box = Box::new(GoStorage1::default());
+        // return (byte_array, querier_box, storage_box);
 
             // TODO 释放资源
             // unsafe {
@@ -155,12 +206,52 @@ impl Querier for GoQuerier {
             //         libc::free(res_gas_meter);
             //     }
             // }
-            return (byte_array, querier_box, storage_box)
-        // } else {
-        //     unreachable!("generate_call_info: do not run into this case");
-        // }
+            //return (byte_array, querier_box, storage_box)
     }
-    // fn as_any(&self) -> &dyn Any {
-    //     self
-    // }
+}
+
+#[derive(Default)]
+pub struct GoQuerier1 {
+    is_none: bool,
+}
+
+impl Querier for GoQuerier1 {
+    fn query_raw(
+        &self,
+        request: &[u8],
+        gas_limit: u64,
+    ) -> BackendResult<SystemResult<ContractResult<Binary>>> {
+        todo!()
+    }
+    fn generate_call_info(&self, contract_address: String) -> ([u8; 32], Box<dyn Querier>, Box<dyn Storage>) {
+        todo!()
+    }
+}
+
+#[derive(Default)]
+pub struct GoStorage1 {
+    is_none: bool,
+}
+
+impl Storage for GoStorage1 {
+    fn get(&self, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
+        todo!()
+    }
+    fn scan(
+        &mut self,
+        start: Option<&[u8]>,
+        end: Option<&[u8]>,
+        order: Order,
+    ) -> BackendResult<u32> {
+        todo!()
+    }
+    fn next(&mut self, iterator_id: u32) -> BackendResult<Option<Record>> {
+        todo!()
+    }
+    fn set(&mut self, key: &[u8], value: &[u8]) -> BackendResult<()> {
+        todo!()
+    }
+    fn remove(&mut self, key: &[u8]) -> BackendResult<()> {
+        todo!()
+    }
 }

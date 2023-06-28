@@ -14,7 +14,22 @@ func RegisterGenerateCallerInfo(fnn func(q unsafe.Pointer, contractAddress strin
 	GenerateCallerInfoFunc = fnn
 }
 
-func GenerateCallerInfo(p unsafe.Pointer, contractAddress *C.char, resCodeHash **C.char, resStore *C.Db, resQuerier *C.GoQuerier) {
+//func GenerateCallerInfo(p unsafe.Pointer, contractAddress *C.char, resCodeHash **C.char, resStore *C.Db, resQuerier *C.GoQuerier) {
+//	if GenerateCallerInfoFunc == nil {
+//		panic("the GenerateCallerInfoFunc is nil")
+//	}
+//	goContractAddress := C.GoString(contractAddress)
+//	fmt.Println("the contract address is", goContractAddress)
+//	codeHash, store, querier, gasMeter := GenerateCallerInfoFunc(p, goContractAddress)
+//	*resCodeHash = (*C.char)(unsafe.Pointer(&codeHash[0]))
+//	dbstate := buildDBState(store, 0)
+//	rs := buildDB(&dbstate, &gasMeter)
+//	resStore = &rs
+//	rq := buildQuerier(&querier)
+//	resQuerier = &rq
+//}
+
+func GenerateCallerInfo(p unsafe.Pointer, contractAddress *C.char, resCodeHash **C.char, resStore **C.Db, resQuerier **C.GoQuerier) {
 	if GenerateCallerInfoFunc == nil {
 		panic("the GenerateCallerInfoFunc is nil")
 	}
@@ -24,9 +39,9 @@ func GenerateCallerInfo(p unsafe.Pointer, contractAddress *C.char, resCodeHash *
 	*resCodeHash = (*C.char)(unsafe.Pointer(&codeHash[0]))
 	dbstate := buildDBState(store, 0)
 	rs := buildDB(&dbstate, &gasMeter)
-	resStore = &rs
+	*resStore = &rs
 	rq := buildQuerier(&querier)
-	resQuerier = &rq
+	*resQuerier = &rq
 }
 
 //func CovertToGGoQuerier(q C.GoQuerier) C.GGoQuerier {
