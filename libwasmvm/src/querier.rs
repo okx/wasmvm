@@ -29,10 +29,10 @@ pub struct Querier_vtable {
     ) -> i32,
     pub generate_call_info: extern "C" fn (
         *const querier_t,
-        contractAddress: *mut c_char,
-        resCodeHash: *mut *mut c_char,
-        resStore: *mut Db,
-        resQuerier: *mut GoQuerier,
+        *mut c_char,
+        *mut *mut c_char,
+        *mut Db,
+        *mut GoQuerier,
     ) -> i32,
 }
 
@@ -93,6 +93,7 @@ impl Querier for GoQuerier {
     }
 
     fn generate_call_info(&self, contract_address: String) -> [u8; 32] {
+        println!("wasmvm generate_call_info contract_address: {:?}", contract_address);
         let c_string = CString::new(contract_address).expect("Failed to create CString");
         let c_string_ptr = c_string.into_raw() as *mut c_char;
 
@@ -114,6 +115,13 @@ impl Querier for GoQuerier {
         }
 
         let mut byte_array: [u8; 32] = [0; 32];
+        if !res_code_hash.is_null(){
+            let c_str = unsafe { CStr::from_ptr(res_code_hash) };
+            let byte_slice = c_str.to_bytes();
+            byte_array.copy_from_slice(&byte_slice[..32]);
+            return byte_array
+        }
+
 
         if !res_code_hash.is_null() && !res_store.is_null() && !res_querier.is_null() {
             let c_str = unsafe { CStr::from_ptr(res_code_hash) };

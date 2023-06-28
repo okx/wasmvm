@@ -17,7 +17,7 @@ typedef GoError (*next_db_fn)(iterator_t idx, gas_meter_t *gas_meter, uint64_t *
 typedef GoError (*humanize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 typedef GoError (*canonicalize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 typedef GoError (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
-typedef GoError (*generate_call_info_fn)(querier_t *ptr, char *contractAddress, char **resCodeHash, struct Db *resStore, struct GoQuerier *resQuerier);
+typedef GoError (*generate_call_info_fn)(querier_t *ptr, char *contractAddress, char **resCodeHash, Db *resStore, GoQuerier *resQuerier);
 
 
 // forward declarations (db)

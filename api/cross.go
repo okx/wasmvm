@@ -4,6 +4,7 @@ package api
 import "C"
 
 import (
+	"fmt"
 	"unsafe"
 )
 
@@ -18,6 +19,7 @@ func GenerateCallerInfo(p unsafe.Pointer, contractAddress *C.char, resCodeHash *
 		panic("the GenerateCallerInfoFunc is nil")
 	}
 	goContractAddress := C.GoString(contractAddress)
+	fmt.Println("the contract address is", goContractAddress)
 	codeHash, store, querier, gasMeter := GenerateCallerInfoFunc(p, goContractAddress)
 	*resCodeHash = (*C.char)(unsafe.Pointer(&codeHash[0]))
 	dbstate := buildDBState(store, 0)
