@@ -11,6 +11,14 @@ use std::ffi::{CStr, CString};
 use crate::storage::GoStorage;
 use std::panic;
 
+use cosmwasm_vm::{call_execute, Backend, Cache, Checksum, Instance, Environment, BackendApi};
+use cosmwasm_vm::{process_gas_info, write_to_contract, VmResult, InstanceOptions, CacheOptions,
+                  features_from_csv,Size};
+use cosmwasm_std::{WasmMsg, MessageInfo, Coin, to_vec, Env, Empty};
+// use tempfile::TempDir;
+use std::path::PathBuf;
+use std::rc::Rc;
+
 // this represents something passed in from the caller side of FFI
 #[repr(C)]
 #[derive(Clone)]
@@ -97,7 +105,12 @@ impl Querier for GoQuerier {
         (result, gas_info)
     }
 
-    fn generate_call_info(&self, contract_address: String) -> ([u8; 32], Box<dyn Querier>, Box<dyn Storage>) {
+    fn call<A: BackendApi + 'static, S: Storage, Q: Querier>(&self, env: &Environment<A, S, Q>,
+                          contract_address: String,
+                          info: &MessageInfo,
+                          call_msg: &[u8],
+                          block_env: &Env
+    ) -> [u8; 32] {
         println!("wasmvm generate_call_info contract_address: {:?}", contract_address);
         let c_string = CString::new(contract_address).expect("Failed to create CString");
         let c_string_ptr = c_string.into_raw() as *mut c_char;
@@ -129,21 +142,32 @@ impl Querier for GoQuerier {
 
 
         let mut byte_array: [u8; 32] = [0; 32];
+
+        let c_str = unsafe { CStr::from_ptr(res_code_hash) };
+        let byte_slice = c_str.to_bytes();
+        byte_array.copy_from_slice(&byte_slice[..32]);
+        let querier = unsafe{(*res_querier).clone()};
+        let storage = GoStorage::new(unsafe{(*res_store).clone()});
+
+        do_call(env, block_env, storage, querier, info, call_msg, byte_array);
+
+        return byte_array
+
         // if !res_code_hash.is_null(){
-            let c_str = unsafe { CStr::from_ptr(res_code_hash) };
-            let byte_slice = c_str.to_bytes();
-            byte_array.copy_from_slice(&byte_slice[..32]);
+            //let c_str = unsafe { CStr::from_ptr(res_code_hash) };
+            //let byte_slice = c_str.to_bytes();
+            //byte_array.copy_from_slice(&byte_slice[..32]);
             // let querier_box: Box<dyn Querier> = Box::new(unsafe { *Box::from_raw(res_querier) });
             // let storage_box: Box<dyn Storage> = Box::new(GoStorage::new(unsafe { *Box::from_raw(res_store) }));
 
             //let querier_box: Box<dyn Querier> = unsafe { Box::new((*res_querier)) };
             //let storage_box: Box<dyn Storage> = Box::new(GoStorage::new(unsafe { *Box::from_raw(res_store) }));
 
-            let querier_box = Box::new(unsafe{(*res_querier).clone()});
-            let storage_box = Box::new(GoStorage::new(unsafe { (*res_store).clone() }));
-            //let querier_box = Box::new(GoQuerier1::default());
-            //let storage_box = Box::new(GoStorage1::default());
-            return (byte_array, querier_box, storage_box);
+            // let querier_box = Box::new(unsafe{(*res_querier).clone()});
+            // let storage_box = Box::new(GoStorage::new(unsafe { (*res_store).clone() }));
+            // //let querier_box = Box::new(GoQuerier1::default());
+            // //let storage_box = Box::new(GoStorage1::default());
+            // return (byte_array, querier_box, storage_box);
         // }
 
         // let mut byte_array: [u8; 32] = [0; 32];
@@ -208,50 +232,166 @@ impl Querier for GoQuerier {
             // }
             //return (byte_array, querier_box, storage_box)
     }
+
+    fn delegate_call<A: BackendApi + 'static, S: Storage, Q: Querier>(&self, env: &Environment<A, S, Q>,
+                                                                      caller_address: String,
+                                                                      contract_address: String,
+                                                                      info: &MessageInfo,
+                                                                      call_msg: &[u8],
+                                                                      block_env: &Env
+    ) -> [u8; 32] {
+        println!("wasmvm delegate_call contract_address: {:?}, caller address {:?}", contract_address, caller_address);
+
+        // get contract code content
+        let c_str = CString::new(contract_address).expect("Failed to create CString");
+        let c_str_ptr = c_str.into_raw() as *mut c_char;
+        let mut res_code_hash0: *mut c_char = std::ptr::null_mut();
+        let mut res_store0: *mut Db = std::ptr::null_mut();
+        let mut res_querier0: *mut GoQuerier = std::ptr::null_mut();
+
+        // 1. 先获取处被调用合约的code
+        let go_result: GoError = (self.vtable.generate_call_info)(
+            self.state,
+            c_str_ptr,
+            &mut res_code_hash0,
+            &mut res_store0,
+            &mut res_querier0,
+        ).into();
+
+        unsafe {
+            // 释放c_string_ptr
+            let _ = CString::from_raw(c_str_ptr);
+        }
+        let mut byte_array: [u8; 32] = [0; 32]; // only used contract address code checksum
+        let c_str = unsafe { CStr::from_ptr(res_code_hash0) };
+        let byte_slice = c_str.to_bytes();
+        byte_array.copy_from_slice(&byte_slice[..32]);
+
+
+        // 2. 获取出caller的存储上下文
+        let c_string = CString::new(caller_address).expect("Failed to create CString");
+        let c_string_ptr = c_string.into_raw() as *mut c_char;
+        let mut res_code_hash: *mut c_char = std::ptr::null_mut();
+        let mut res_store: *mut Db = std::ptr::null_mut();
+        let mut res_querier: *mut GoQuerier = std::ptr::null_mut();
+
+        let go_result: GoError = (self.vtable.generate_call_info)(
+            self.state,
+            c_string_ptr,
+            &mut res_code_hash,
+            &mut res_store,
+            &mut res_querier,
+        ).into();
+
+        unsafe {
+            // 释放c_string_ptr
+            let _ = CString::from_raw(c_string_ptr);
+        }
+
+        if res_store.is_null() {
+            println!("wasmvm generate_call_info res_store is null");
+        }
+
+        if res_querier.is_null() {
+            println!("wasmvm generate_call_info res_querier is null");
+        }
+
+
+        let querier = unsafe{(*res_querier).clone()};
+        let storage = GoStorage::new(unsafe{(*res_store).clone()});
+
+        do_call(env, block_env, storage, querier, info, call_msg, byte_array);
+        return byte_array
+    }
 }
 
-#[derive(Default)]
-pub struct GoQuerier1 {
-    is_none: bool,
+pub fn do_call<A: BackendApi + 'static, S: Storage, Q: Querier>(
+    env: &Environment<A, S, Q>,
+    benv: &Env,
+    storage: GoStorage,
+    querier: GoQuerier,
+    info: &MessageInfo,
+    call_msg: &[u8],
+    checksum: [u8; 32],
+) -> VmResult<u32> {
+    let backend = Backend {
+        api: env.api.clone(),
+        storage: storage,
+        querier: querier
+    };
+
+    //let mut gas_limit = env.get_gas_left();
+    let ins_options = InstanceOptions{
+        gas_limit: 1891871610000000,
+        print_debug: env.print_debug,
+    };
+
+    println!("wasmvm do_call 1");
+    let path = PathBuf::from("_cache_evm/data/wasm");
+    let options = CacheOptions {
+        base_dir: path,
+        supported_features: features_from_csv("iterator,staking,stargate"),
+        memory_cache_size:  Size::mebi(100),
+        instance_memory_limit:  Size::mebi(32),
+    };
+    println!("wasmvm do_call 2");
+    let cache = unsafe { Cache::new(options) }.unwrap();
+    println!("wasmvm do_call 3, {:?}", ins_options.gas_limit);
+    let mut new_instance = cache.get_instance(&Checksum::from(checksum), backend, ins_options)?;
+    new_instance.set_call_depth(env.call_depth + 1);
+    println!("wasmvm do_call 4");
+    let result= call_execute::<_, _, _, Empty>(&mut new_instance, benv, info, call_msg).map_err(|errno|{
+        println!("the call_execute result is {:?}", &errno);
+        return errno;
+    })?;
+    let nn = new_instance.get_gas_left();
+    println!("the call_execute result is {}, {:?} ", nn, result);
+    let serialized = to_vec(&result).unwrap();
+    new_instance.write_to_contract(&serialized)
 }
 
-impl Querier for GoQuerier1 {
-    fn query_raw(
-        &self,
-        request: &[u8],
-        gas_limit: u64,
-    ) -> BackendResult<SystemResult<ContractResult<Binary>>> {
-        todo!()
-    }
-    fn generate_call_info(&self, contract_address: String) -> ([u8; 32], Box<dyn Querier>, Box<dyn Storage>) {
-        todo!()
-    }
-}
-
-#[derive(Default)]
-pub struct GoStorage1 {
-    is_none: bool,
-}
-
-impl Storage for GoStorage1 {
-    fn get(&self, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
-        todo!()
-    }
-    fn scan(
-        &mut self,
-        start: Option<&[u8]>,
-        end: Option<&[u8]>,
-        order: Order,
-    ) -> BackendResult<u32> {
-        todo!()
-    }
-    fn next(&mut self, iterator_id: u32) -> BackendResult<Option<Record>> {
-        todo!()
-    }
-    fn set(&mut self, key: &[u8], value: &[u8]) -> BackendResult<()> {
-        todo!()
-    }
-    fn remove(&mut self, key: &[u8]) -> BackendResult<()> {
-        todo!()
-    }
-}
+// #[derive(Default)]
+// pub struct GoQuerier1 {
+//     is_none: bool,
+// }
+//
+// impl Querier for GoQuerier1 {
+//     fn query_raw(
+//         &self,
+//         request: &[u8],
+//         gas_limit: u64,
+//     ) -> BackendResult<SystemResult<ContractResult<Binary>>> {
+//         todo!()
+//     }
+//     fn generate_call_info(&self, contract_address: String) -> ([u8; 32], Box<dyn Querier>, Box<dyn Storage>) {
+//         todo!()
+//     }
+// }
+//
+// #[derive(Default)]
+// pub struct GoStorage1 {
+//     is_none: bool,
+// }
+//
+// impl Storage for GoStorage1 {
+//     fn get(&self, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
+//         todo!()
+//     }
+//     fn scan(
+//         &mut self,
+//         start: Option<&[u8]>,
+//         end: Option<&[u8]>,
+//         order: Order,
+//     ) -> BackendResult<u32> {
+//         todo!()
+//     }
+//     fn next(&mut self, iterator_id: u32) -> BackendResult<Option<Record>> {
+//         todo!()
+//     }
+//     fn set(&mut self, key: &[u8], value: &[u8]) -> BackendResult<()> {
+//         todo!()
+//     }
+//     fn remove(&mut self, key: &[u8]) -> BackendResult<()> {
+//         todo!()
+//     }
+// }
