@@ -11,7 +11,7 @@ use std::ffi::{CStr, CString};
 use crate::storage::GoStorage;
 use std::panic;
 
-use cosmwasm_vm::{call_execute, Backend, Cache, Checksum, Instance, Environment, BackendApi};
+use cosmwasm_vm::{call_execute, call_execute_raw, Backend, Cache, Checksum, Instance, Environment, BackendApi};
 use cosmwasm_vm::{process_gas_info, write_to_contract, VmResult, InstanceOptions, CacheOptions,
                   features_from_csv,Size};
 use cosmwasm_std::{WasmMsg, MessageInfo, Coin, to_vec, Env, Empty};
@@ -110,7 +110,7 @@ impl Querier for GoQuerier {
                           info: &MessageInfo,
                           call_msg: &[u8],
                           block_env: &Env
-    ) -> [u8; 32] {
+    ) -> VmResult<Vec<u8>> {
         println!("wasmvm generate_call_info contract_address: {:?}", contract_address);
         let c_string = CString::new(contract_address).expect("Failed to create CString");
         let c_string_ptr = c_string.into_raw() as *mut c_char;
@@ -149,9 +149,7 @@ impl Querier for GoQuerier {
         let querier = unsafe{(*res_querier).clone()};
         let storage = GoStorage::new(unsafe{(*res_store).clone()});
 
-        do_call(env, block_env, storage, querier, info, call_msg, byte_array);
-
-        return byte_array
+        do_call(env, block_env, storage, querier, info, call_msg, byte_array)
 
         // if !res_code_hash.is_null(){
             //let c_str = unsafe { CStr::from_ptr(res_code_hash) };
@@ -239,7 +237,7 @@ impl Querier for GoQuerier {
                                                                       info: &MessageInfo,
                                                                       call_msg: &[u8],
                                                                       block_env: &Env
-    ) -> [u8; 32] {
+    ) -> VmResult<Vec<u8>> {
         println!("wasmvm delegate_call contract_address: {:?}, caller address {:?}", contract_address, caller_address);
 
         // get contract code content
@@ -300,8 +298,7 @@ impl Querier for GoQuerier {
         let querier = unsafe{(*res_querier).clone()};
         let storage = GoStorage::new(unsafe{(*res_store).clone()});
 
-        do_call(env, block_env, storage, querier, info, call_msg, byte_array);
-        return byte_array
+        do_call(env, block_env, storage, querier, info, call_msg, byte_array)
     }
 }
 
@@ -313,7 +310,7 @@ pub fn do_call<A: BackendApi + 'static, S: Storage, Q: Querier>(
     info: &MessageInfo,
     call_msg: &[u8],
     checksum: [u8; 32],
-) -> VmResult<u32> {
+) -> VmResult<Vec<u8>> {
     let backend = Backend {
         api: env.api.clone(),
         storage: storage,
@@ -340,14 +337,19 @@ pub fn do_call<A: BackendApi + 'static, S: Storage, Q: Querier>(
     let mut new_instance = cache.get_instance(&Checksum::from(checksum), backend, ins_options)?;
     new_instance.set_call_depth(env.call_depth + 1);
     println!("wasmvm do_call 4");
-    let result= call_execute::<_, _, _, Empty>(&mut new_instance, benv, info, call_msg).map_err(|errno|{
-        println!("the call_execute result is {:?}", &errno);
-        return errno;
-    })?;
+    // let result= call_execute::<_, _, _, Empty>(&mut new_instance, benv, info, call_msg).map_err(|errno|{
+    //     println!("the call_execute result is {:?}", &errno);
+    //     return errno;
+    // })?;
     let nn = new_instance.get_gas_left();
-    println!("the call_execute result is {}, {:?} ", nn, result);
-    let serialized = to_vec(&result).unwrap();
-    new_instance.write_to_contract(&serialized)
+    println!("the call_execute result is {} ", nn);
+    // let serialized = to_vec(&result).unwrap();
+    // new_instance.write_to_contract(&serialized)
+
+    let benv = to_vec(benv).unwrap();
+    let info = to_vec(info).unwrap();
+    println!("start the call_execute_raw");
+    call_execute_raw(&mut new_instance, &benv, &info, call_msg)
 }
 
 // #[derive(Default)]
