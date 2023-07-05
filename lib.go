@@ -55,6 +55,10 @@ func (vm *VM) Cleanup() {
 	api.ReleaseCache(vm.cache)
 }
 
+func (vm *VM) GetCache() api.Cache {
+	return vm.cache
+}
+
 // Create will compile the wasm code, and store the resulting pre-compile
 // as well as the original code. Both can be referenced later via Checksum
 // This must be done one time for given code, after which it can be

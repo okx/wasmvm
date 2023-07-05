@@ -2,13 +2,19 @@
 
 use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::rc::Rc;
+use std::sync::{Arc, RwLock};
+use lazy_static::lazy_static;
 
 use cosmwasm_vm::{
     call_execute_raw, call_ibc_channel_close_raw, call_ibc_channel_connect_raw,
     call_ibc_channel_open_raw, call_ibc_packet_ack_raw, call_ibc_packet_receive_raw,
     call_ibc_packet_timeout_raw, call_instantiate_raw, call_migrate_raw, call_query_raw,
-    call_reply_raw, call_sudo_raw, Backend, Cache, Checksum, Instance, InstanceOptions, VmResult,
+    call_reply_raw, call_sudo_raw, Backend, Cache, Checksum, Instance, InstanceOptions,
+    VmResult,BackendApi,InternalCallParam,
 };
+
+use cosmwasm_std::{Env, MessageInfo};
 
 use crate::api::GoApi;
 use crate::args::{ARG1, ARG2, ARG3, CACHE_ARG, CHECKSUM_ARG, GAS_USED_ARG};
@@ -523,7 +529,7 @@ fn call_3_args(
 
 fn do_call_3_args(
     vm_fn: VmFn3Args,
-    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+    cache: &'static mut Cache<GoApi, GoStorage, GoQuerier>,
     checksum: ByteSliceView,
     arg1: ByteSliceView,
     arg2: ByteSliceView,
@@ -549,10 +555,50 @@ fn do_call_3_args(
         gas_limit,
         print_debug,
     };
-    let mut instance = cache.get_instance(&checksum, backend, options)?;
+
+    let senv: Env = serde_json::from_str(std::str::from_utf8(arg1.clone()).unwrap()).unwrap();
+    let sinfo: MessageInfo = serde_json::from_str(std::str::from_utf8(arg2.clone()).unwrap()).unwrap();
+    println!("messageInfo is {:?}, env is {:?} ", sinfo, senv);
+    let param = InternalCallParam {
+        call_depth: 1,
+        sender_addr: sinfo.sender,
+        delegate_contract_addr: senv.contract.address
+    };
+
+    let mut instance = cache.get_instance_ex(&checksum, backend, options, param)?;
+
+    println!("rust the return depth {}, {:?}", instance.get_call_depth(), instance.get_sender_addr());
+
+
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = vm_fn(&mut instance, arg1, arg2, arg3);
     *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)
 }
+
+lazy_static! {
+    static ref GCACHE: RwLock<Option<Arc<&'static mut Cache<GoApi, GoStorage, GoQuerier>>>> = RwLock::new(None);
+}
+
+pub fn get_global_cache() -> Arc<&'static mut Cache<GoApi, GoStorage, GoQuerier>> {
+    GCACHE.read().unwrap().as_ref().unwrap().clone()
+}
+
+pub fn set_global_cache(cache: &'static mut Cache<GoApi, GoStorage, GoQuerier>) {
+    *GCACHE.write().unwrap() = Some(Arc::new(cache));
+}
+
+
+// lazy_static! {
+//     static ref GO_API: RwLock<Option<GoApi>> = RwLock::new(None);
+// }
+//
+// pub fn get_global_go_api() -> Option<GoApi> {
+//     GO_API.read().unwrap().clone()
+// }
+//
+// pub fn set_global_go_api(api: GoApi) {
+//     *GO_API.write().unwrap() = Some(api);
+// }
+

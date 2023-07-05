@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::borrow::Borrow;
 use cosmwasm_std::{Binary, ContractResult, SystemError, SystemResult};
 use cosmwasm_vm::{BackendResult, GasInfo, Querier, Storage};
 use cosmwasm_std::{Order, Record};
@@ -9,15 +10,20 @@ use std::os::raw::{c_char, c_void};
 use crate::db::Db;
 use std::ffi::{CStr, CString};
 use crate::storage::GoStorage;
+use crate::api::GoApi;
+use crate::cache::{cache_t, to_cache};
 use std::panic;
+use std::env;
 
 use cosmwasm_vm::{call_execute, call_execute_raw, Backend, Cache, Checksum, Instance, Environment, BackendApi};
-use cosmwasm_vm::{process_gas_info, write_to_contract, VmResult, InstanceOptions, CacheOptions,
+use cosmwasm_vm::{process_gas_info, write_to_contract, VmResult, InstanceOptions, InternalCallParam, CacheOptions,
                   features_from_csv,Size};
 use cosmwasm_std::{WasmMsg, MessageInfo, Coin, to_vec, Env, Empty};
 // use tempfile::TempDir;
 use std::path::PathBuf;
 use std::rc::Rc;
+
+use crate::calls::{get_global_cache};
 
 // this represents something passed in from the caller side of FFI
 #[repr(C)]
@@ -45,6 +51,10 @@ pub struct Querier_vtable {
         *mut *mut c_char,
         *mut *mut Db,
         *mut *mut GoQuerier,
+    ) -> i32,
+    pub get_wasm_info: extern "C" fn (
+        *mut *mut GoApi,
+        *mut *mut cache_t,
     ) -> i32,
 }
 
@@ -105,13 +115,15 @@ impl Querier for GoQuerier {
         (result, gas_info)
     }
 
-    fn call<A: BackendApi + 'static, S: Storage, Q: Querier>(&self, env: &Environment<A, S, Q>,
+    fn call<A: BackendApi + 'static, S: Storage, Q: Querier>(&self, env1: &Environment<A, S, Q>,
                           contract_address: String,
                           info: &MessageInfo,
                           call_msg: &[u8],
                           block_env: &Env
     ) -> VmResult<Vec<u8>> {
-        println!("wasmvm generate_call_info contract_address: {:?}", contract_address);
+        env::set_var("RUST_BACKTRACE", "full");
+
+        println!("wasmvm call contract_address: {:?} , sender address {:?}", contract_address, info.sender.clone());
         let c_string = CString::new(contract_address).expect("Failed to create CString");
         let c_string_ptr = c_string.into_raw() as *mut c_char;
 
@@ -140,16 +152,33 @@ impl Querier for GoQuerier {
             println!("wasmvm generate_call_info res_querier is null");
         }
 
-
+        //let c_str = unsafe { CStr::from_ptr(res_code_hash) };
+        //let byte_slice = c_str.to_bytes();
+        let byte_slice = copy_bytes_from_c_str(res_code_hash, 32);
         let mut byte_array: [u8; 32] = [0; 32];
-
-        let c_str = unsafe { CStr::from_ptr(res_code_hash) };
-        let byte_slice = c_str.to_bytes();
         byte_array.copy_from_slice(&byte_slice[..32]);
         let querier = unsafe{(*res_querier).clone()};
         let storage = GoStorage::new(unsafe{(*res_store).clone()});
 
-        do_call(env, block_env, storage, querier, info, call_msg, byte_array)
+
+
+
+        let mut res_api: *mut GoApi = std::ptr::null_mut();
+        let mut res_cache: *mut cache_t = std::ptr::null_mut();
+
+        let go_result: GoError = (self.vtable.get_wasm_info)(
+            &mut res_api,
+            &mut res_cache,
+        ).into();
+        if res_api.is_null() {
+            println!("wasmvm get_wasm_info call res_api is null");
+        }
+        if res_cache.is_null() {
+            println!("wasmvm get_wasm_info call res_cache is null");
+        }
+        let api = unsafe{(*res_api).clone()};
+
+        do_call(env1, block_env, storage, querier, api, res_cache, info, call_msg, byte_array)
 
         // if !res_code_hash.is_null(){
             //let c_str = unsafe { CStr::from_ptr(res_code_hash) };
@@ -232,13 +261,14 @@ impl Querier for GoQuerier {
     }
 
     fn delegate_call<A: BackendApi + 'static, S: Storage, Q: Querier>(&self, env: &Environment<A, S, Q>,
-                                                                      caller_address: String,
                                                                       contract_address: String,
                                                                       info: &MessageInfo,
                                                                       call_msg: &[u8],
                                                                       block_env: &Env
     ) -> VmResult<Vec<u8>> {
-        println!("wasmvm delegate_call contract_address: {:?}, caller address {:?}", contract_address, caller_address);
+        env::set_var("RUST_BACKTRACE", "1");
+        println!("wasmvm delegate_call contract_address: {:?}, caller address {:?}, sender address {:?}",
+                 contract_address, env.delegate_contract_addr.clone(), info.sender.clone());
 
         // get contract code content
         let c_str = CString::new(contract_address).expect("Failed to create CString");
@@ -266,7 +296,8 @@ impl Querier for GoQuerier {
         byte_array.copy_from_slice(&byte_slice[..32]);
 
 
-        // 2. 获取出caller的存储上下文
+        // 2. 获取caller的存储上下文
+        let caller_address = env.delegate_contract_addr.clone().into_string();
         let c_string = CString::new(caller_address).expect("Failed to create CString");
         let c_string_ptr = c_string.into_raw() as *mut c_char;
         let mut res_code_hash: *mut c_char = std::ptr::null_mut();
@@ -293,12 +324,24 @@ impl Querier for GoQuerier {
         if res_querier.is_null() {
             println!("wasmvm generate_call_info res_querier is null");
         }
-
-
         let querier = unsafe{(*res_querier).clone()};
         let storage = GoStorage::new(unsafe{(*res_store).clone()});
 
-        do_call(env, block_env, storage, querier, info, call_msg, byte_array)
+        let mut res_api: *mut GoApi = std::ptr::null_mut();
+        let mut res_cache: *mut cache_t = std::ptr::null_mut();
+        let go_result: GoError = (self.vtable.get_wasm_info)(
+            &mut res_api,
+            &mut res_cache,
+        ).into();
+        if res_api.is_null() {
+            println!("wasmvm generate_call_info res_api is null");
+        }
+        if res_cache.is_null() {
+            println!("wasmvm generate_call_info res_cache is null");
+        }
+        let api = unsafe{(*res_api).clone()};
+
+        do_call(env, block_env, storage, querier, api, res_cache, info, call_msg, byte_array)
     }
 }
 
@@ -307,15 +350,24 @@ pub fn do_call<A: BackendApi + 'static, S: Storage, Q: Querier>(
     benv: &Env,
     storage: GoStorage,
     querier: GoQuerier,
+    api: GoApi,
+    cache: *mut cache_t,
     info: &MessageInfo,
     call_msg: &[u8],
     checksum: [u8; 32],
 ) -> VmResult<Vec<u8>> {
+    // let backend = Backend {
+    //     api: api,
+    //     storage: storage,
+    //     querier: querier
+    // };
+
     let backend = Backend {
-        api: env.api.clone(),
+        api: api,
         storage: storage,
         querier: querier
     };
+
 
     //let mut gas_limit = env.get_gas_left();
     let ins_options = InstanceOptions{
@@ -323,19 +375,30 @@ pub fn do_call<A: BackendApi + 'static, S: Storage, Q: Querier>(
         print_debug: env.print_debug,
     };
 
-    println!("wasmvm do_call 1");
-    let path = PathBuf::from("_cache_evm/data/wasm");
-    let options = CacheOptions {
-        base_dir: path,
-        supported_features: features_from_csv("iterator,staking,stargate"),
-        memory_cache_size:  Size::mebi(100),
-        instance_memory_limit:  Size::mebi(32),
+    // println!("wasmvm do_call 1");
+    // let path = PathBuf::from("_cache_evm/data/wasm");
+    // let options = CacheOptions {
+    //     base_dir: path,
+    //     supported_features: features_from_csv("iterator,staking,stargate"),
+    //     memory_cache_size:  Size::mebi(100),
+    //     instance_memory_limit:  Size::mebi(32),
+    // };
+    // println!("wasmvm do_call 2");
+    // let cache = unsafe { Cache::new(options) }.unwrap();
+
+    let cache = unsafe { &mut *(cache as *mut Cache<GoApi, GoStorage, GoQuerier>) };
+
+
+    //let cache = get_global_cache();
+
+
+    println!("wasmvm do_call 3, {:?} {:?}", ins_options.gas_limit, checksum);
+    let param = InternalCallParam {
+        call_depth: env.call_depth + 1,
+        sender_addr: env.sender_addr.clone(),
+        delegate_contract_addr: env.delegate_contract_addr.clone()
     };
-    println!("wasmvm do_call 2");
-    let cache = unsafe { Cache::new(options) }.unwrap();
-    println!("wasmvm do_call 3, {:?}", ins_options.gas_limit);
-    let mut new_instance = cache.get_instance(&Checksum::from(checksum), backend, ins_options)?;
-    new_instance.set_call_depth(env.call_depth + 1);
+    let mut new_instance = cache.get_instance_ex(&Checksum::from(checksum), backend, ins_options, param)?;
     println!("wasmvm do_call 4");
     // let result= call_execute::<_, _, _, Empty>(&mut new_instance, benv, info, call_msg).map_err(|errno|{
     //     println!("the call_execute result is {:?}", &errno);
@@ -352,6 +415,27 @@ pub fn do_call<A: BackendApi + 'static, S: Storage, Q: Querier>(
     call_execute_raw(&mut new_instance, &benv, &info, call_msg)
 }
 
+
+fn copy_bytes_from_c_str(c_str: *const i8, length: usize) -> [u8; 32] {
+    // Convert C string pointer to Rust CStr
+    let c_str = unsafe { CStr::from_ptr(c_str) };
+
+    // Convert CStr to byte slice
+    let byte_slice = c_str.to_bytes();
+
+    // Create a mutable array to hold the copied bytes
+    let mut byte_array: [u8; 32] = [0; 32];
+
+    // Copy bytes from byte slice to byte array
+    for (i, byte) in byte_slice.iter().enumerate() {
+        if i >= length {
+            break;
+        }
+        byte_array[i] = *byte;
+    }
+
+    byte_array
+}
 // #[derive(Default)]
 // pub struct GoQuerier1 {
 //     is_none: bool,

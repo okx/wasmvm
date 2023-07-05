@@ -17,6 +17,7 @@ GoError cCanonicalAddress(api_t *ptr, U8SliceView src, UnmanagedVector *dest, Un
 // imports (querier)
 GoError cQueryExternal(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 GoError cGenerateCallInfo(querier_t *ptr, char *contractAddress, char **resCodeHash, Db **resStore, GoQuerier **resQuerier);
+GoError cGetWasmInfo(GoApi **resGoApi, cache_t **resCache_t);
 
 // Gateway functions (db)
 GoError cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *val, UnmanagedVector *errOut) {
@@ -52,6 +53,10 @@ GoError cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_ga
 
 GoError cGenerateCallInfo_cgo(querier_t *ptr, char *contractAddress, char **resCodeHash, Db **resStore, GoQuerier **resQuerier) {
     return cGenerateCallInfo(ptr, contractAddress, resCodeHash, resStore, resQuerier);
+}
+
+GoError cGetWasmInfo_cgo(GoApi **resGoApi, cache_t **resCache_t) {
+    return cGetWasmInfo(resGoApi, resCache_t);
 }
 
 */
