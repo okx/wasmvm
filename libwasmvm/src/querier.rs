@@ -119,8 +119,9 @@ impl Querier for GoQuerier {
                           contract_address: String,
                           info: &MessageInfo,
                           call_msg: &[u8],
-                          block_env: &Env
-    ) -> VmResult<Vec<u8>> {
+                          block_env: &Env,
+                          gas_limit: u64
+    ) -> (VmResult<Vec<u8>>, GasInfo) {
         env::set_var("RUST_BACKTRACE", "full");
 
         println!("wasmvm call contract_address: {:?} , sender address {:?}", contract_address, info.sender.clone());
@@ -179,7 +180,7 @@ impl Querier for GoQuerier {
         }
         let api = unsafe{(*res_api).clone()};
 
-        do_call(env1, block_env, storage, querier, api, res_cache, info, call_msg, byte_array)
+        do_call(env1, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit)
 
         // if !res_code_hash.is_null(){
             //let c_str = unsafe { CStr::from_ptr(res_code_hash) };
@@ -265,8 +266,9 @@ impl Querier for GoQuerier {
                                                                       contract_address: String,
                                                                       info: &MessageInfo,
                                                                       call_msg: &[u8],
-                                                                      block_env: &Env
-    ) -> VmResult<Vec<u8>> {
+                                                                      block_env: &Env,
+                                                                      gas_limit: u64
+    ) -> (VmResult<Vec<u8>>, GasInfo) {
         env::set_var("RUST_BACKTRACE", "1");
         println!("wasmvm delegate_call contract_address: {:?}, caller address {:?}, sender address {:?}",
                  contract_address, env.delegate_contract_addr.clone(), info.sender.clone());
@@ -342,7 +344,7 @@ impl Querier for GoQuerier {
         }
         let api = unsafe{(*res_api).clone()};
 
-        do_call(env, block_env, storage, querier, api, res_cache, info, call_msg, byte_array)
+        do_call(env, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit)
     }
 }
 
@@ -356,23 +358,16 @@ pub fn do_call<A: BackendApi + 'static, S: Storage, Q: Querier>(
     info: &MessageInfo,
     call_msg: &[u8],
     checksum: [u8; 32],
-) -> VmResult<Vec<u8>> {
-    // let backend = Backend {
-    //     api: api,
-    //     storage: storage,
-    //     querier: querier
-    // };
-
+    gas_limit: u64,
+) -> (VmResult<Vec<u8>>, GasInfo) {
     let backend = Backend {
         api: api,
         storage: storage,
         querier: querier
     };
 
-
-    //let mut gas_limit = env.get_gas_left();
     let ins_options = InstanceOptions{
-        gas_limit: 1891871610000000,
+        gas_limit: gas_limit,
         print_debug: env.print_debug,
     };
 
@@ -393,27 +388,46 @@ pub fn do_call<A: BackendApi + 'static, S: Storage, Q: Querier>(
     //let cache = get_global_cache();
 
 
-    println!("wasmvm do_call 3, {:?} {:?}", ins_options.gas_limit, checksum);
+    //println!("wasmvm do_call 3, {:?} {:?}", ins_options.gas_limit, checksum);
     let param = InternalCallParam {
         call_depth: env.call_depth + 1,
         sender_addr: env.sender_addr.clone(),
         delegate_contract_addr: env.delegate_contract_addr.clone()
     };
-    let mut new_instance = cache.get_instance_ex(&Checksum::from(checksum), backend, ins_options, param)?;
-    println!("wasmvm do_call 4");
+    let mut new_instance = cache.get_instance_ex(&Checksum::from(checksum), backend, ins_options, param);
+    match new_instance {
+        Ok(mut ins) => {
+            let benv = to_vec(benv).unwrap();
+            let info = to_vec(info).unwrap();
+            println!("start the call_execute_raw");
+            let result = call_execute_raw(&mut ins, &benv, &info, call_msg);
+            let gas_used = gas_limit - ins.get_gas_left();
+            let gas_externally_used = ins.get_externally_used_gas();
+            let gas_cost       = gas_used - gas_externally_used;
+                println!("the call_execute result is gas_limit {} gas_used {}, gas_externally_used {}", gas_limit, gas_used, gas_externally_used);
+            (result, GasInfo::new(gas_cost, gas_externally_used))
+        }
+        Err(err) => {
+            (Err(err), GasInfo::with_cost(0))
+        }
+    }
     // let result= call_execute::<_, _, _, Empty>(&mut new_instance, benv, info, call_msg).map_err(|errno|{
     //     println!("the call_execute result is {:?}", &errno);
     //     return errno;
     // })?;
-    let nn = new_instance.get_gas_left();
-    println!("the call_execute result is {} ", nn);
+    //let nn = new_instance.get_gas_left();
+    //println!("the call_execute result is {} ", nn);
     // let serialized = to_vec(&result).unwrap();
     // new_instance.write_to_contract(&serialized)
 
-    let benv = to_vec(benv).unwrap();
-    let info = to_vec(info).unwrap();
-    println!("start the call_execute_raw");
-    call_execute_raw(&mut new_instance, &benv, &info, call_msg)
+    // let benv = to_vec(benv).unwrap();
+    // let info = to_vec(info).unwrap();
+    // println!("start the call_execute_raw");
+    // let result = call_execute_raw(&mut new_instance, &benv, &info, call_msg);
+    // let gas_left = new_instance.get_gas_left();
+    // let gas_used = gas_limit - gas_left;
+    // println!("the call_execute result is {} ", gas_used);
+    // (result, gas_used)
 }
 
 // #[derive(Default)]
