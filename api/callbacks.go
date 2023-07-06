@@ -17,7 +17,7 @@ typedef GoError (*next_db_fn)(iterator_t idx, gas_meter_t *gas_meter, uint64_t *
 typedef GoError (*humanize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 typedef GoError (*canonicalize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 typedef GoError (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
-typedef GoError (*generate_call_info_fn)(querier_t *ptr, char *contractAddress, char **resCodeHash, Db **resStore, GoQuerier **resQuerier);
+typedef GoError (*generate_call_info_fn)(querier_t *ptr, char *contractAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier);
 typedef GoError (*get_wasm_info_fn)(GoApi **resGoApi, cache_t **resCache_t);
 
 
@@ -33,7 +33,7 @@ GoError cHumanAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, Un
 GoError cCanonicalAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 // and querier
 GoError cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
-GoError cGenerateCallInfo_cgo(querier_t *ptr, char *contractAddress, char **resCodeHash, Db **resStore, GoQuerier **resQuerier);
+GoError cGenerateCallInfo_cgo(querier_t *ptr, char *contractAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier);
 GoError cGetWasmInfo_cgo(GoApi **resGoApi, cache_t **resCache_t);
 */
 import "C"
@@ -473,7 +473,7 @@ func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, 
 }
 
 //export cGenerateCallInfo
-func cGenerateCallInfo(ptr *C.querier_t, contractAddress *C.char, resCodeHash **C.char, resStore **C.Db, result **C.GoQuerier) (ret C.GoError) {
+func cGenerateCallInfo(ptr *C.querier_t, contractAddress *C.char, resCodeHash *C.UnmanagedVector, resStore **C.Db, result **C.GoQuerier) (ret C.GoError) {
 	defer recoverPanic(&ret)
 	GenerateCallerInfo(unsafe.Pointer(ptr), contractAddress, resCodeHash, resStore, result)
 	return C.GoError_None

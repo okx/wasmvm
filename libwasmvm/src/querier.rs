@@ -48,7 +48,7 @@ pub struct Querier_vtable {
     pub generate_call_info: extern "C" fn (
         *const querier_t,
         *mut c_char,
-        *mut *mut c_char,
+        *mut UnmanagedVector,
         *mut *mut Db,
         *mut *mut GoQuerier,
     ) -> i32,
@@ -127,14 +127,14 @@ impl Querier for GoQuerier {
         let c_string = CString::new(contract_address).expect("Failed to create CString");
         let c_string_ptr = c_string.into_raw() as *mut c_char;
 
-        let mut res_code_hash: *mut c_char = std::ptr::null_mut();
+        let mut res_code_hash = UnmanagedVector::default();
         let mut res_store: *mut Db = std::ptr::null_mut();
         let mut res_querier: *mut GoQuerier = std::ptr::null_mut();
 
         let go_result: GoError = (self.vtable.generate_call_info)(
             self.state,
             c_string_ptr,
-            &mut res_code_hash,
+            &mut res_code_hash as *mut UnmanagedVector,
             &mut res_store,
             &mut res_querier,
         ).into();
@@ -152,11 +152,12 @@ impl Querier for GoQuerier {
             println!("wasmvm generate_call_info res_querier is null");
         }
 
-        //let c_str = unsafe { CStr::from_ptr(res_code_hash) };
-        //let byte_slice = c_str.to_bytes();
-        let byte_slice = copy_bytes_from_c_str(res_code_hash, 32);
+
+        // We destruct the UnmanagedVector here, no matter if we need the data.
+        let res_code_hash = res_code_hash.consume();
+        let bin_res_code_hash: Vec<u8> = res_code_hash.unwrap_or_default();
         let mut byte_array: [u8; 32] = [0; 32];
-        byte_array.copy_from_slice(&byte_slice[..32]);
+        byte_array.copy_from_slice(&bin_res_code_hash[..32]);
         let querier = unsafe{(*res_querier).clone()};
         let storage = GoStorage::new(unsafe{(*res_store).clone()});
 
@@ -273,7 +274,7 @@ impl Querier for GoQuerier {
         // get contract code content
         let c_str = CString::new(contract_address).expect("Failed to create CString");
         let c_str_ptr = c_str.into_raw() as *mut c_char;
-        let mut res_code_hash0: *mut c_char = std::ptr::null_mut();
+        let mut res_code_hash0 = UnmanagedVector::default();
         let mut res_store0: *mut Db = std::ptr::null_mut();
         let mut res_querier0: *mut GoQuerier = std::ptr::null_mut();
 
@@ -281,7 +282,7 @@ impl Querier for GoQuerier {
         let go_result: GoError = (self.vtable.generate_call_info)(
             self.state,
             c_str_ptr,
-            &mut res_code_hash0,
+            &mut res_code_hash0 as *mut UnmanagedVector,
             &mut res_store0,
             &mut res_querier0,
         ).into();
@@ -290,24 +291,24 @@ impl Querier for GoQuerier {
             // 释放c_string_ptr
             let _ = CString::from_raw(c_str_ptr);
         }
-        let mut byte_array: [u8; 32] = [0; 32]; // only used contract address code checksum
-        let c_str = unsafe { CStr::from_ptr(res_code_hash0) };
-        let byte_slice = c_str.to_bytes();
-        byte_array.copy_from_slice(&byte_slice[..32]);
+        let res_code_hash0 = res_code_hash0.consume();
+        let bin_res_code_hash: Vec<u8> = res_code_hash0.unwrap_or_default();
+        let mut byte_array: [u8; 32] = [0; 32];
+        byte_array.copy_from_slice(&bin_res_code_hash[..32]);
 
 
         // 2. 获取caller的存储上下文
         let caller_address = env.delegate_contract_addr.clone().into_string();
         let c_string = CString::new(caller_address).expect("Failed to create CString");
         let c_string_ptr = c_string.into_raw() as *mut c_char;
-        let mut res_code_hash: *mut c_char = std::ptr::null_mut();
+        let mut res_code_hash = UnmanagedVector::default();
         let mut res_store: *mut Db = std::ptr::null_mut();
         let mut res_querier: *mut GoQuerier = std::ptr::null_mut();
 
         let go_result: GoError = (self.vtable.generate_call_info)(
             self.state,
             c_string_ptr,
-            &mut res_code_hash,
+            &mut res_code_hash as *mut UnmanagedVector,
             &mut res_store,
             &mut res_querier,
         ).into();
@@ -415,27 +416,6 @@ pub fn do_call<A: BackendApi + 'static, S: Storage, Q: Querier>(
     call_execute_raw(&mut new_instance, &benv, &info, call_msg)
 }
 
-
-fn copy_bytes_from_c_str(c_str: *const i8, length: usize) -> [u8; 32] {
-    // Convert C string pointer to Rust CStr
-    let c_str = unsafe { CStr::from_ptr(c_str) };
-
-    // Convert CStr to byte slice
-    let byte_slice = c_str.to_bytes();
-
-    // Create a mutable array to hold the copied bytes
-    let mut byte_array: [u8; 32] = [0; 32];
-
-    // Copy bytes from byte slice to byte array
-    for (i, byte) in byte_slice.iter().enumerate() {
-        if i >= length {
-            break;
-        }
-        byte_array[i] = *byte;
-    }
-
-    byte_array
-}
 // #[derive(Default)]
 // pub struct GoQuerier1 {
 //     is_none: bool,

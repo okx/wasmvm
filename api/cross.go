@@ -35,7 +35,7 @@ func RegisterGetCacheInfo(fnn func() (GoAPI, Cache)) {
 //	resQuerier = &rq
 //}
 
-func GenerateCallerInfo(p unsafe.Pointer, contractAddress *C.char, resCodeHash **C.char, resStore **C.Db, resQuerier **C.GoQuerier) {
+func GenerateCallerInfo(p unsafe.Pointer, contractAddress *C.char, resCodeHash *C.UnmanagedVector, resStore **C.Db, resQuerier **C.GoQuerier) {
 	if GenerateCallerInfoFunc == nil {
 		panic("the GenerateCallerInfoFunc is nil")
 	}
@@ -43,7 +43,7 @@ func GenerateCallerInfo(p unsafe.Pointer, contractAddress *C.char, resCodeHash *
 	fmt.Println("the contract address is", goContractAddress)
 	codeHash, store, querier, gasMeter := GenerateCallerInfoFunc(p, goContractAddress)
 	fmt.Println("the checksum is", codeHash)
-	*resCodeHash = (*C.char)(unsafe.Pointer(&codeHash[0]))
+	*resCodeHash = newUnmanagedVector(codeHash)
 	dbstate := buildDBState(store, 0)
 	rs := buildDB(&dbstate, &gasMeter)
 	*resStore = &rs
