@@ -1849,7 +1849,6 @@ dependencies = [
  "cosmwasm-vm",
  "errno",
  "hex",
- "lazy_static",
  "serde",
  "serde_json",
  "tempfile",

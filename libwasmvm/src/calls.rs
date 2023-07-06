@@ -2,9 +2,6 @@
 
 use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::rc::Rc;
-use std::sync::{Arc, RwLock};
-use lazy_static::lazy_static;
 
 use cosmwasm_vm::{
     call_execute_raw, call_ibc_channel_close_raw, call_ibc_channel_connect_raw,
@@ -558,17 +555,12 @@ fn do_call_3_args(
 
     let senv: Env = serde_json::from_str(std::str::from_utf8(arg1.clone()).unwrap()).unwrap();
     let sinfo: MessageInfo = serde_json::from_str(std::str::from_utf8(arg2.clone()).unwrap()).unwrap();
-    println!("messageInfo is {:?}, env is {:?} ", sinfo, senv);
     let param = InternalCallParam {
         call_depth: 1,
         sender_addr: sinfo.sender,
         delegate_contract_addr: senv.contract.address
     };
-
     let mut instance = cache.get_instance_ex(&checksum, backend, options, param)?;
-
-    println!("rust the return depth {}, {:?}", instance.get_call_depth(), instance.get_sender_addr());
-
 
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = vm_fn(&mut instance, arg1, arg2, arg3);
@@ -576,29 +568,3 @@ fn do_call_3_args(
     instance.recycle();
     Ok(res?)
 }
-
-lazy_static! {
-    static ref GCACHE: RwLock<Option<Arc<&'static mut Cache<GoApi, GoStorage, GoQuerier>>>> = RwLock::new(None);
-}
-
-pub fn get_global_cache() -> Arc<&'static mut Cache<GoApi, GoStorage, GoQuerier>> {
-    GCACHE.read().unwrap().as_ref().unwrap().clone()
-}
-
-pub fn set_global_cache(cache: &'static mut Cache<GoApi, GoStorage, GoQuerier>) {
-    *GCACHE.write().unwrap() = Some(Arc::new(cache));
-}
-
-
-// lazy_static! {
-//     static ref GO_API: RwLock<Option<GoApi>> = RwLock::new(None);
-// }
-//
-// pub fn get_global_go_api() -> Option<GoApi> {
-//     GO_API.read().unwrap().clone()
-// }
-//
-// pub fn set_global_go_api(api: GoApi) {
-//     *GO_API.write().unwrap() = Some(api);
-// }
-
