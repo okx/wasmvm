@@ -243,7 +243,6 @@ dependencies = [
 [[package]]
 name = "cosmwasm-crypto"
 version = "1.2.5"
-source = "git+https://github.com/okx/cosmwasm.git?rev=v1.2.6#5220ed7aee3245d624e1756e7acdb03dfc820f74"
 dependencies = [
  "digest 0.10.3",
  "ed25519-zebra",
@@ -255,7 +254,6 @@ dependencies = [
 [[package]]
 name = "cosmwasm-derive"
 version = "1.2.5"
-source = "git+https://github.com/okx/cosmwasm.git?rev=v1.2.6#5220ed7aee3245d624e1756e7acdb03dfc820f74"
 dependencies = [
  "syn 1.0.99",
 ]
@@ -263,7 +261,6 @@ dependencies = [
 [[package]]
 name = "cosmwasm-std"
 version = "1.2.5"
-source = "git+https://github.com/okx/cosmwasm.git?rev=v1.2.6#5220ed7aee3245d624e1756e7acdb03dfc820f74"
 dependencies = [
  "base64",
  "cosmwasm-crypto",
@@ -282,7 +279,6 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm"
 version = "1.2.5"
-source = "git+https://github.com/okx/cosmwasm.git?rev=v1.2.6#5220ed7aee3245d624e1756e7acdb03dfc820f74"
 dependencies = [
  "bitflags",
  "bytecheck",
@@ -299,6 +295,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.3",
+ "tempfile",
  "thiserror",
  "wasmer",
  "wasmer-middlewares",
