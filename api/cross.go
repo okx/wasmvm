@@ -32,7 +32,7 @@ func GetCallInfo(p unsafe.Pointer, contrAddr C.U8SliceView, storeAddr C.U8SliceV
 		return C.GoError_Other
 	}
 	*resCodeHash = newUnmanagedVector(codeHash)
-	dbstate := buildDBState(store, 0)
+	dbstate := buildDBState(store, startCall())
 	rs := buildDB(&dbstate, &gasMeter)
 	*resStore = &rs
 	rq := buildQuerier(&querier)
@@ -49,5 +49,14 @@ func GetWasmCacheInfo(resGoApi **C.GoApi, resCache_t **C.cache_t, errOut *C.Unma
 	rsap := buildAPI(&api)
 	*resGoApi = &rsap
 	*resCache_t = cache.ptr
+	return C.GoError_None
+}
+
+func Release(ptr *C.db_t) (ret C.GoError) {
+	if ptr == nil {
+		return C.GoError_None
+	}
+	state := (*DBState)(unsafe.Pointer(ptr))
+	endCall(state.CallID)
 	return C.GoError_None
 }

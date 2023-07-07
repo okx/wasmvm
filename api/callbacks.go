@@ -19,7 +19,7 @@ typedef GoError (*canonicalize_address_fn)(api_t *ptr, U8SliceView src, Unmanage
 typedef GoError (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 typedef GoError (*get_call_info_fn)(querier_t *ptr, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, UnmanagedVector *errOut);
 typedef GoError (*get_wasm_info_fn)(GoApi **resGoApi, cache_t **resCache_t, UnmanagedVector *errOut);
-
+typedef GoError (*release_fn)(db_t *ptr);
 
 // forward declarations (db)
 GoError cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *val, UnmanagedVector *errOut);
@@ -35,6 +35,7 @@ GoError cCanonicalAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest
 GoError cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 GoError cGetCallInfo_cgo(querier_t *ptr, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, UnmanagedVector *errOut);
 GoError cGetWasmInfo_cgo(GoApi **resGoApi, cache_t **resCache_t, UnmanagedVector *errOut);
+GoError cRelease_cgo(db_t *ptr);
 */
 import "C"
 
@@ -430,6 +431,7 @@ var querier_vtable = C.Querier_vtable{
 	query_external: (C.query_external_fn)(C.cQueryExternal_cgo),
 	get_call_info:  (C.get_call_info_fn)(C.cGetCallInfo_cgo),
 	get_wasm_info:  (C.get_wasm_info_fn)(C.cGetWasmInfo_cgo),
+	release:        (C.release_fn)(C.cRelease_cgo),
 }
 
 // contract: original pointer/struct referenced must live longer than C.GoQuerier struct
@@ -482,4 +484,10 @@ func cGetCallInfo(ptr *C.querier_t, contractAddress C.U8SliceView, storeAddress 
 func cGetWasmInfo(resGoApi **C.GoApi, resCache_t **C.cache_t, errOut *C.UnmanagedVector) (ret C.GoError) {
 	defer recoverPanic(&ret)
 	return GetWasmCacheInfo(resGoApi, resCache_t, errOut)
+}
+
+//export cRelease
+func cRelease(ptr *C.db_t) (ret C.GoError) {
+	defer recoverPanic(&ret)
+	return Release(ptr)
 }

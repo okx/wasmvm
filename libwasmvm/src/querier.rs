@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use cosmwasm_std::{Binary, ContractResult, SystemError, SystemResult};
 use cosmwasm_vm::{BackendError, BackendResult, GasInfo, Querier, Storage, VmError};
 use cosmwasm_std::{Order, Record};
@@ -5,7 +6,7 @@ use cosmwasm_std::{Order, Record};
 use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
 use std::os::raw::{c_char};
-use crate::db::Db;
+use crate::db::{Db, db_t};
 use std::ffi::{CString};
 use crate::storage::GoStorage;
 use crate::api::GoApi;
@@ -50,6 +51,9 @@ pub struct Querier_vtable {
         *mut *mut cache_t,
         *mut UnmanagedVector, // error message output
     ) -> i32,
+    pub release: extern "C" fn(
+        *mut db_t,
+    )-> i32,
 }
 
 #[repr(C)]
@@ -186,7 +190,11 @@ impl Querier for GoQuerier {
         }
 
         let api = unsafe{(*res_api).clone()};
-        do_call(env1, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit)
+        let (result, gas_info) = do_call(env1, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit);
+
+        (self.vtable.release)(unsafe{(*res_store).state});
+
+        (result, gas_info)
     }
 
     fn delegate_call<A: BackendApi, S: Storage, Q: Querier>(&self, env: &Environment<A, S, Q>,
@@ -267,8 +275,11 @@ impl Querier for GoQuerier {
         }
 
         let api = unsafe{(*res_api).clone()};
+        let (result, gas_info) = do_call(env, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit);
 
-        do_call(env, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit)
+        (self.vtable.release)(unsafe{(*res_store).state});
+
+        (result, gas_info)
     }
 }
 
