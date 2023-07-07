@@ -7,38 +7,47 @@ import (
 	"unsafe"
 )
 
-var GenerateCallerInfoFunc func(q unsafe.Pointer, contractAddress string) ([]byte, KVStore, Querier, GasMeter)
+var GetCallInfoFunc func(q unsafe.Pointer, contractAddress, storeAddress string) ([]byte, KVStore, Querier, GasMeter, error)
 
 var GetWasmCacheInfoFunc func() (GoAPI, Cache)
 
-func RegisterGenerateCallerInfo(fnn func(q unsafe.Pointer, contractAddress string) ([]byte, KVStore, Querier, GasMeter)) {
-	GenerateCallerInfoFunc = fnn
+func RegisterGetWasmCallInfo(fnn func(q unsafe.Pointer, contractAddress, storeAddress string) ([]byte, KVStore, Querier, GasMeter, error)) {
+	GetCallInfoFunc = fnn
 }
 
-func RegisterGetCacheInfo(fnn func() (GoAPI, Cache)) {
+func RegisterGetWasmCacheInfo(fnn func() (GoAPI, Cache)) {
 	GetWasmCacheInfoFunc = fnn
 }
 
-func GenerateCallerInfo(p unsafe.Pointer, contractAddress *C.char, resCodeHash *C.UnmanagedVector, resStore **C.Db, resQuerier **C.GoQuerier) {
-	if GenerateCallerInfoFunc == nil {
-		panic("the GenerateCallerInfoFunc is nil")
+func GetCallInfo(p unsafe.Pointer, contrAddr C.U8SliceView, storeAddr C.U8SliceView, resCodeHash *C.UnmanagedVector, resStore **C.Db, resQuerier **C.GoQuerier, errOut *C.UnmanagedVector) (ret C.GoError) {
+	if GetCallInfoFunc == nil {
+		*errOut = newUnmanagedVector([]byte("the GetCallInfoFunc is nil"))
+		return C.GoError_Other
 	}
-	goContractAddress := C.GoString(contractAddress)
-	codeHash, store, querier, gasMeter := GenerateCallerInfoFunc(p, goContractAddress)
+	cAddr := copyU8Slice(contrAddr)
+	sAddr := copyU8Slice(storeAddr)
+	codeHash, store, querier, gasMeter, err := GetCallInfoFunc(p, string(cAddr), string(sAddr))
+	if err != nil {
+		*errOut = newUnmanagedVector([]byte(err.Error()))
+		return C.GoError_Other
+	}
 	*resCodeHash = newUnmanagedVector(codeHash)
 	dbstate := buildDBState(store, 0)
 	rs := buildDB(&dbstate, &gasMeter)
 	*resStore = &rs
 	rq := buildQuerier(&querier)
 	*resQuerier = &rq
+	return C.GoError_None
 }
 
-func GetWasmCacheInfo(resGoApi **C.GoApi, resCache_t **C.cache_t) {
+func GetWasmCacheInfo(resGoApi **C.GoApi, resCache_t **C.cache_t, errOut *C.UnmanagedVector) (ret C.GoError) {
 	if GetWasmCacheInfoFunc == nil {
-		panic("the GetWasmCacheInfoFunc is nil")
+		*errOut = newUnmanagedVector([]byte("the GetWasmCacheInfoFunc is nil"))
+		return C.GoError_Other
 	}
 	api, cache := GetWasmCacheInfoFunc()
 	rsap := buildAPI(&api)
 	*resGoApi = &rsap
 	*resCache_t = cache.ptr
+	return C.GoError_None
 }

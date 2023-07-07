@@ -296,8 +296,8 @@ typedef struct querier_t {
 
 typedef struct Querier_vtable {
   int32_t (*query_external)(const struct querier_t*, uint64_t, uint64_t*, struct U8SliceView, struct UnmanagedVector*, struct UnmanagedVector*);
-  int32_t (*generate_call_info)(const struct querier_t*, char*, struct UnmanagedVector*, struct Db**, struct GoQuerier**);
-  int32_t (*get_wasm_info)(struct GoApi**, struct cache_t**);
+  int32_t (*get_call_info)(const struct querier_t*, struct U8SliceView, struct U8SliceView, struct UnmanagedVector*, struct Db**, struct GoQuerier**, struct UnmanagedVector*);
+  int32_t (*get_wasm_info)(struct GoApi**, struct cache_t**, struct UnmanagedVector*);
 } Querier_vtable;
 
 typedef struct GoQuerier {

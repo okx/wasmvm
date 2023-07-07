@@ -1,5 +1,5 @@
 use cosmwasm_std::{Binary, ContractResult, SystemError, SystemResult};
-use cosmwasm_vm::{BackendResult, GasInfo, Querier, Storage};
+use cosmwasm_vm::{BackendError, BackendResult, GasInfo, Querier, Storage, VmError};
 use cosmwasm_std::{Order, Record};
 
 use crate::error::GoError;
@@ -36,16 +36,19 @@ pub struct Querier_vtable {
         *mut UnmanagedVector, // result output
         *mut UnmanagedVector, // error message output
     ) -> i32,
-    pub generate_call_info: extern "C" fn (
+    pub get_call_info: extern "C" fn (
         *const querier_t,
-        *mut c_char,
+        U8SliceView,    // contract address
+        U8SliceView,    // store address
         *mut UnmanagedVector,
         *mut *mut Db,
         *mut *mut GoQuerier,
+        *mut UnmanagedVector, // error message output
     ) -> i32,
     pub get_wasm_info: extern "C" fn (
         *mut *mut GoApi,
         *mut *mut cache_t,
+        *mut UnmanagedVector, // error message output
     ) -> i32,
 }
 
@@ -116,70 +119,74 @@ impl Querier for GoQuerier {
         //env::set_var("RUST_BACKTRACE", "full");
         println!("rust wasmvm call contract_address: {:?} , sender address {:?}", contract_address, info.sender.clone());
 
-        let c_string = CString::new(contract_address).expect("Failed to create CString");
-        let c_string_ptr = c_string.into_raw() as *mut c_char;
         let mut res_code_hash = UnmanagedVector::default();
         let mut res_store: *mut Db = std::ptr::null_mut();
         let mut res_querier: *mut GoQuerier = std::ptr::null_mut();
+        let mut error_msg = UnmanagedVector::default();
 
-        let go_result: GoError = (self.vtable.generate_call_info)(
+        let go_result: GoError = (self.vtable.get_call_info)(
             self.state,
-            c_string_ptr,
+            U8SliceView::new(Some(contract_address.as_bytes())),
+            U8SliceView::new(Some(contract_address.as_bytes())),
             &mut res_code_hash as *mut UnmanagedVector,
             &mut res_store,
             &mut res_querier,
+            &mut error_msg as *mut UnmanagedVector,
         ).into();
 
-        // 释放c_string_ptr
+        let default = || {
+            format!(
+                "Call failed to get_call_info contract address: {}",
+                contract_address
+            )
+        };
         unsafe {
-            let _ = CString::from_raw(c_string_ptr);
+            if let Err(err) = go_result.into_result(error_msg, default) {
+                return (Err(VmError::BackendErr { source: err }), GasInfo::with_cost(0));
+            }
         }
 
-        if res_store.is_null() {
-            println!("rust wasmvm generate_call_info res_store is null");
+        if res_store.is_null() || res_querier.is_null() || res_code_hash.is_none(){
+            return (Err(VmError::BackendErr {source: BackendError::unknown("res_store, res_querier or res_code_hash is null")}), GasInfo::with_cost(0));
         }
-
-        if res_querier.is_null() {
-            println!("rust wasmvm generate_call_info res_querier is null");
-        }
-
 
         // We destruct the UnmanagedVector here, no matter if we need the data.
         let res_code_hash = res_code_hash.consume();
         let bin_res_code_hash: Vec<u8> = res_code_hash.unwrap_or_default();
         let mut byte_array: [u8; 32] = [0; 32];
         byte_array.copy_from_slice(&bin_res_code_hash[..32]);
+
         let querier = unsafe{(*res_querier).clone()};
         let storage = GoStorage::new(unsafe{(*res_store).clone()});
 
 
         let mut res_api: *mut GoApi = std::ptr::null_mut();
         let mut res_cache: *mut cache_t = std::ptr::null_mut();
+        let mut error_msg = UnmanagedVector::default();
 
         let go_result: GoError = (self.vtable.get_wasm_info)(
             &mut res_api,
             &mut res_cache,
+            &mut error_msg as *mut UnmanagedVector,
         ).into();
-        if res_api.is_null() {
-            println!("rust wasmvm get_wasm_info call res_api is null");
-        }
-        if res_cache.is_null() {
-            println!("rust wasmvm get_wasm_info call res_cache is null");
-        }
-        let api = unsafe{(*res_api).clone()};
 
+        let default = || {
+            format!(
+                "Call failed to get_wasm_info contract address: {}",
+                contract_address
+            )
+        };
+        unsafe {
+            if let Err(err) = go_result.into_result(error_msg, default) {
+                return (Err(VmError::BackendErr { source: err }), GasInfo::with_cost(0));
+            }
+        }
+        if res_api.is_null() || res_cache.is_null() {
+            return (Err(VmError::BackendErr { source: BackendError::unknown("res_api or res_cache is null") }), GasInfo::with_cost(0));
+        }
+
+        let api = unsafe{(*res_api).clone()};
         do_call(env1, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit)
-            // TODO 释放资源
-            // unsafe {
-            //     // 释放 res_store
-            //     if !res_store.is_null() {
-            //         libc::free(res_store);
-            //     }
-            //
-            //     // 释放 res_querier
-            //     if !res_querier.is_null() {
-            //         libc::free(res_querier);
-            //     }
     }
 
     fn delegate_call<A: BackendApi, S: Storage, Q: Querier>(&self, env: &Environment<A, S, Q>,
@@ -194,75 +201,71 @@ impl Querier for GoQuerier {
         println!("rust wasmvm delegate_call contract_address: {:?}, caller address {:?}, sender address {:?}",
                  contract_address, env.delegate_contract_addr.clone(), info.sender.clone());
 
-        // get contract code content
-        let c_str = CString::new(contract_address).expect("Failed to create CString");
-        let c_str_ptr = c_str.into_raw() as *mut c_char;
-        let mut res_code_hash0 = UnmanagedVector::default();
-        let mut res_store0: *mut Db = std::ptr::null_mut();
-        let mut res_querier0: *mut GoQuerier = std::ptr::null_mut();
-
-        // 1. 先获取处被调用合约的code
-        let go_result: GoError = (self.vtable.generate_call_info)(
-            self.state,
-            c_str_ptr,
-            &mut res_code_hash0 as *mut UnmanagedVector,
-            &mut res_store0,
-            &mut res_querier0,
-        ).into();
-
-        unsafe {
-            // 释放c_string_ptr
-            let _ = CString::from_raw(c_str_ptr);
-        }
-        let res_code_hash0 = res_code_hash0.consume();
-        let bin_res_code_hash: Vec<u8> = res_code_hash0.unwrap_or_default();
-        let mut byte_array: [u8; 32] = [0; 32];
-        byte_array.copy_from_slice(&bin_res_code_hash[..32]);
-
-
-        // 2. 获取caller的存储上下文
-        let caller_address = env.delegate_contract_addr.clone().into_string();
-        let c_string = CString::new(caller_address).expect("Failed to create CString");
-        let c_string_ptr = c_string.into_raw() as *mut c_char;
         let mut res_code_hash = UnmanagedVector::default();
         let mut res_store: *mut Db = std::ptr::null_mut();
         let mut res_querier: *mut GoQuerier = std::ptr::null_mut();
+        let mut error_msg = UnmanagedVector::default();
 
-        let go_result: GoError = (self.vtable.generate_call_info)(
+        let go_result: GoError = (self.vtable.get_call_info)(
             self.state,
-            c_string_ptr,
+            U8SliceView::new(Some(contract_address.as_bytes())),
+            U8SliceView::new(Some(env.delegate_contract_addr.clone().as_bytes())),
             &mut res_code_hash as *mut UnmanagedVector,
             &mut res_store,
             &mut res_querier,
+            &mut error_msg as *mut UnmanagedVector,
         ).into();
 
+        let default = || {
+            format!(
+                "Delegate call failed to get_call_info contract address: {} store address: {}",
+                contract_address,
+                env.delegate_contract_addr.clone().into_string()
+            )
+        };
         unsafe {
-            // 释放c_string_ptr
-            let _ = CString::from_raw(c_string_ptr);
+            if let Err(err) = go_result.into_result(error_msg, default) {
+                return (Err(VmError::BackendErr { source: err }), GasInfo::with_cost(0));
+            }
         }
 
-        if res_store.is_null() {
-            println!("rust wasmvm generate_call_info res_store is null");
+        if res_store.is_null() || res_querier.is_null() || res_code_hash.is_none(){
+            return (Err(VmError::BackendErr {source: BackendError::unknown("res_store, res_querier or res_code_hash is null")}), GasInfo::with_cost(0));
         }
 
-        if res_querier.is_null() {
-            println!("rust wasmvm generate_call_info res_querier is null");
-        }
+        let res_code_hash = res_code_hash.consume();
+        let bin_res_code_hash: Vec<u8> = res_code_hash.unwrap_or_default();
+        let mut byte_array: [u8; 32] = [0; 32];
+        byte_array.copy_from_slice(&bin_res_code_hash[..32]);
+
         let querier = unsafe{(*res_querier).clone()};
         let storage = GoStorage::new(unsafe{(*res_store).clone()});
 
         let mut res_api: *mut GoApi = std::ptr::null_mut();
         let mut res_cache: *mut cache_t = std::ptr::null_mut();
+        let mut error_msg = UnmanagedVector::default();
         let go_result: GoError = (self.vtable.get_wasm_info)(
             &mut res_api,
             &mut res_cache,
+            &mut error_msg as *mut UnmanagedVector,
         ).into();
-        if res_api.is_null() {
-            println!("rust wasmvm get_wasm_info res_api is null");
+
+        let default = || {
+            format!(
+                "Delegate call failed to get_wasm_info contract address: {} store address: {}",
+                contract_address,
+                env.delegate_contract_addr.clone().into_string()
+            )
+        };
+        unsafe {
+            if let Err(err) = go_result.into_result(error_msg, default) {
+                return (Err(VmError::BackendErr { source: err }), GasInfo::with_cost(0));
+            }
         }
-        if res_cache.is_null() {
-            println!("rust wasmvm get_wasm_info res_cache is null");
+        if res_api.is_null() || res_cache.is_null() {
+            return (Err(VmError::BackendErr { source: BackendError::unknown("res_api or res_cache is null") }), GasInfo::with_cost(0));
         }
+
         let api = unsafe{(*res_api).clone()};
 
         do_call(env, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit)
