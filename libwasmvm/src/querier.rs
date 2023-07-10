@@ -7,7 +7,6 @@ use crate::db::{Db, db_t};
 use crate::storage::GoStorage;
 use crate::api::GoApi;
 use crate::cache::{cache_t};
-use std::env;
 
 use cosmwasm_vm::{call_execute_raw, Backend, Cache, Checksum, Environment, BackendApi};
 use cosmwasm_vm::{VmResult, InstanceOptions, InternalCallParam};
@@ -114,9 +113,6 @@ impl Querier for GoQuerier {
                           block_env: &Env,
                           gas_limit: u64
     ) -> (VmResult<Vec<u8>>, GasInfo) {
-        //env::set_var("RUST_BACKTRACE", "full");
-        println!("rust wasmvm call contract_address: {:?} , sender address {:?}", contract_address, info.sender.clone());
-
         let mut res_code_hash = UnmanagedVector::default();
         let mut res_store: *mut Db = std::ptr::null_mut();
         let mut res_querier: *mut GoQuerier = std::ptr::null_mut();
@@ -198,11 +194,6 @@ impl Querier for GoQuerier {
                                                                       block_env: &Env,
                                                                       gas_limit: u64
     ) -> (VmResult<Vec<u8>>, GasInfo) {
-        env::set_var("RUST_BACKTRACE", "full");
-
-        println!("rust wasmvm delegate_call contract_address: {:?}, caller address {:?}, sender address {:?}",
-                 contract_address, env.delegate_contract_addr.clone(), info.sender.clone());
-
         let mut res_code_hash = UnmanagedVector::default();
         let mut res_store: *mut Db = std::ptr::null_mut();
         let mut res_querier: *mut GoQuerier = std::ptr::null_mut();
@@ -315,7 +306,6 @@ pub fn do_call<A: BackendApi, S: Storage, Q: Querier>(
             let gas_used = gas_limit - ins.get_gas_left();
             let gas_externally_used = ins.get_externally_used_gas();
             let gas_cost       = gas_used - gas_externally_used;
-            println!("rust wasmvm the call_execute gas_limit {} gas_used {}, gas_externally_used {}", gas_limit, gas_used, gas_externally_used);
             (result, GasInfo::new(gas_cost, gas_externally_used))
         }
         Err(err) => {
