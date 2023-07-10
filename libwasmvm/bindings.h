@@ -283,6 +283,7 @@ typedef struct api_t {
 typedef struct GoApi_vtable {
   int32_t (*humanize_address)(const struct api_t*, struct U8SliceView, struct UnmanagedVector*, struct UnmanagedVector*, uint64_t*);
   int32_t (*canonicalize_address)(const struct api_t*, struct U8SliceView, struct UnmanagedVector*, struct UnmanagedVector*, uint64_t*);
+  int32_t (*contract_external)(const struct api_t*, uint64_t, uint64_t*, struct U8SliceView, struct UnmanagedVector*, struct UnmanagedVector*);
 } GoApi_vtable;
 
 typedef struct GoApi {
