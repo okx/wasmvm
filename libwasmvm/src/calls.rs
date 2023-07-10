@@ -8,7 +8,7 @@ use cosmwasm_vm::{
     call_ibc_channel_open_raw, call_ibc_packet_ack_raw, call_ibc_packet_receive_raw,
     call_ibc_packet_timeout_raw, call_instantiate_raw, call_migrate_raw, call_query_raw,
     call_reply_raw, call_sudo_raw, Backend, Cache, Checksum, Instance, InstanceOptions,
-    VmResult,BackendApi,InternalCallParam,
+    VmResult, InternalCallParam,
 };
 
 use cosmwasm_std::{Env, MessageInfo};

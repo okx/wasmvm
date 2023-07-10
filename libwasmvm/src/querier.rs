@@ -1,13 +1,9 @@
-use std::borrow::Borrow;
 use cosmwasm_std::{Binary, ContractResult, SystemError, SystemResult};
 use cosmwasm_vm::{BackendError, BackendResult, GasInfo, Querier, Storage, VmError};
-use cosmwasm_std::{Order, Record};
 
 use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
-use std::os::raw::{c_char};
 use crate::db::{Db, db_t};
-use std::ffi::{CString};
 use crate::storage::GoStorage;
 use crate::api::GoApi;
 use crate::cache::{cache_t};
