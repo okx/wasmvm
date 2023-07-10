@@ -41,6 +41,10 @@ func (vm *VM) Cleanup() {
 	api.ReleaseCache(vm.cache)
 }
 
+func (vm *VM) GetCache() api.Cache {
+	return vm.cache
+}
+
 // Deprecated: Renamed to StoreCode
 func (vm *VM) Create(code WasmCode) (Checksum, error) {
 	return vm.StoreCode(code)

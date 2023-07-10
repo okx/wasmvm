@@ -16,6 +16,9 @@ GoError cHumanAddress(api_t *ptr, U8SliceView src, UnmanagedVector *dest, Unmana
 GoError cCanonicalAddress(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 // imports (querier)
 GoError cQueryExternal(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
+GoError cGetCallInfo(querier_t *ptr, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, UnmanagedVector *errOut);
+GoError cGetWasmInfo(GoApi **resGoApi, cache_t **resCache_t, UnmanagedVector *errOut);
+GoError cRelease(db_t *ptr);
 
 // Gateway functions (db)
 GoError cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *val, UnmanagedVector *errOut) {
@@ -48,6 +51,19 @@ GoError cHumanAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, Un
 GoError cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut) {
     return cQueryExternal(ptr, gas_limit, used_gas, request, result, errOut);
 }
+
+GoError cGetCallInfo_cgo(querier_t *ptr, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, UnmanagedVector *errOut) {
+    return cGetCallInfo(ptr, contractAddress, storeAddress, resCodeHash, resStore, resQuerier, errOut);
+}
+
+GoError cGetWasmInfo_cgo(GoApi **resGoApi, cache_t **resCache_t, UnmanagedVector *errOut) {
+    return cGetWasmInfo(resGoApi, resCache_t, errOut);
+}
+
+GoError cRelease_cgo(db_t *ptr) {
+   return cRelease(ptr);
+}
+
 */
 import "C"
 

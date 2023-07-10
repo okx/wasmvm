@@ -17,6 +17,9 @@ typedef GoError (*next_db_fn)(iterator_t idx, gas_meter_t *gas_meter, uint64_t *
 typedef GoError (*humanize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 typedef GoError (*canonicalize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 typedef GoError (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
+typedef GoError (*get_call_info_fn)(querier_t *ptr, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, UnmanagedVector *errOut);
+typedef GoError (*get_wasm_info_fn)(GoApi **resGoApi, cache_t **resCache_t, UnmanagedVector *errOut);
+typedef GoError (*release_fn)(db_t *ptr);
 
 // forward declarations (db)
 GoError cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *val, UnmanagedVector *errOut);
@@ -30,8 +33,9 @@ GoError cHumanAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, Un
 GoError cCanonicalAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 // and querier
 GoError cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
-
-
+GoError cGetCallInfo_cgo(querier_t *ptr, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, UnmanagedVector *errOut);
+GoError cGetWasmInfo_cgo(GoApi **resGoApi, cache_t **resCache_t, UnmanagedVector *errOut);
+GoError cRelease_cgo(db_t *ptr);
 */
 import "C"
 
@@ -383,6 +387,9 @@ func cCanonicalAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector,
 
 var querier_vtable = C.Querier_vtable{
 	query_external: (C.query_external_fn)(C.cQueryExternal_cgo),
+	get_call_info:  (C.get_call_info_fn)(C.cGetCallInfo_cgo),
+	get_wasm_info:  (C.get_wasm_info_fn)(C.cGetWasmInfo_cgo),
+	release:        (C.release_fn)(C.cRelease_cgo),
 }
 
 // contract: original pointer/struct referenced must live longer than C.GoQuerier struct
@@ -423,4 +430,22 @@ func cQueryExternal(ptr *C.querier_t, gasLimit cu64, usedGas *cu64, request C.U8
 	}
 	*result = newUnmanagedVector(bz)
 	return C.GoError_None
+}
+
+//export cGetCallInfo
+func cGetCallInfo(ptr *C.querier_t, contractAddress C.U8SliceView, storeAddress C.U8SliceView, resCodeHash *C.UnmanagedVector, resStore **C.Db, result **C.GoQuerier, errOut *C.UnmanagedVector) (ret C.GoError) {
+	defer recoverPanic(&ret)
+	return GetCallInfo(unsafe.Pointer(ptr), contractAddress, storeAddress, resCodeHash, resStore, result, errOut)
+}
+
+//export cGetWasmInfo
+func cGetWasmInfo(resGoApi **C.GoApi, resCache_t **C.cache_t, errOut *C.UnmanagedVector) (ret C.GoError) {
+	defer recoverPanic(&ret)
+	return GetWasmCacheInfo(resGoApi, resCache_t, errOut)
+}
+
+//export cRelease
+func cRelease(ptr *C.db_t) (ret C.GoError) {
+	defer recoverPanic(&ret)
+	return Release(ptr)
 }

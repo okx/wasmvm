@@ -3,7 +3,9 @@
 package cosmwasm
 
 import (
+	"github.com/CosmWasm/wasmvm/internal/api"
 	"github.com/CosmWasm/wasmvm/types"
+	"unsafe"
 )
 
 // Checksum represents a hash of the Wasm bytecode that serves as an ID. Must be generated from this library.
@@ -24,6 +26,8 @@ type Querier = types.Querier
 // GasMeter is a read-only version of the sdk gas meter
 type GasMeter = types.GasMeter
 
+type Cache = api.Cache
+
 // LibwasmvmVersion returns the version of the loaded library
 // at runtime. This can be used for debugging to verify the loaded version
 // matches the expected version.
@@ -31,4 +35,12 @@ type GasMeter = types.GasMeter
 // When cgo is disabled at build time, this returns an error at runtime.
 func LibwasmvmVersion() (string, error) {
 	return libwasmvmVersionImpl()
+}
+
+func RegisterGetWasmCallInfo(fnn func(q unsafe.Pointer, contractAddress, storeAddress string) ([]byte, types.KVStore, types.Querier, types.GasMeter, error)) {
+	api.RegisterGetWasmCallInfo(fnn)
+}
+
+func RegisterGetWasmCacheInfo(fnn func() (types.GoAPI, Cache)) {
+	api.RegisterGetWasmCacheInfo(fnn)
 }
