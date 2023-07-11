@@ -18,5 +18,7 @@ type ContractCreateRequest struct {
 	InitMsg   []byte `json:"init_msg"`
 	AdminAddr string `json:"admin_addr"`
 	Label     string `json:"label"`
+	IsCreate2 bool   `json:"is_create2"`
+	Salt      []byte `json:"salt"`
 	//Deposit   Coins  `json:"deposit"`
 }
