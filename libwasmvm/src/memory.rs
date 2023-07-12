@@ -12,7 +12,7 @@ pub struct ByteSliceView {
     /// True if and only if the byte slice is nil in Go. If this is true, the other fields must be ignored.
     is_nil: bool,
     ptr: *const u8,
-    len: usize,
+    pub len: usize,
 }
 
 impl ByteSliceView {
