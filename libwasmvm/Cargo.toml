@@ -26,12 +26,12 @@ default = []
 backtraces = []
 
 [dependencies]
-cosmwasm-std = { path = "../../cosmwasm/packages/std", version = "1.0.0", features = [
+cosmwasm-std = { git = "https://github.com/okx/cosmwasm.git", rev = "v1.0.0-625", features = [
     "staking",
     "stargate",
     "iterator",
 ] }
-cosmwasm-vm = { path = "../../cosmwasm/packages/vm", version = "1.0.0", features = [
+cosmwasm-vm = { git = "https://github.com/okx/cosmwasm.git", rev = "v1.0.0-625", features = [
     "staking",
     "stargate",
     "iterator",
