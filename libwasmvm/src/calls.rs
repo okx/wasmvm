@@ -542,6 +542,7 @@ fn do_call_3_args(
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
+    println!("libwasmvm---gas_used -0-{}", gas_used);
     let checksum: Checksum = checksum
         .read()
         .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
@@ -559,6 +560,7 @@ fn do_call_3_args(
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = vm_fn(&mut instance, arg1, arg2, arg3);
     *gas_used = instance.create_gas_report().used_internally;
+    println!("libwasmvm---gas_used -1-{}", gas_used);
     instance.recycle();
     Ok(res?)
 }
