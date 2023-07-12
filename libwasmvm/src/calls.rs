@@ -550,9 +550,18 @@ fn do_call_3_args(
         print_debug,
     };
     let mut instance = cache.get_instance(&checksum, backend, options)?;
+    *gas_used = instance.create_gas_report().used_internally;
+    println!("--libwasmvm--do_call_3_args gas used start--{}", gas_used);
+    println!(
+        "--libwasmvm--do_call_3_args arg1:{},arg2:{}, arg3:{}",
+        arg1.len(),
+        arg2.len(),
+        arg3.len()
+    );
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = vm_fn(&mut instance, arg1, arg2, arg3);
     *gas_used = instance.create_gas_report().used_internally;
+    println!("--libwasmvm--do_call_3_args gas used end--{}", gas_used);
     instance.recycle();
     Ok(res?)
 }
