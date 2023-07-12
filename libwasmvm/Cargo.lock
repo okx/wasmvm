@@ -243,6 +243,7 @@ dependencies = [
 name = "cosmwasm-vm"
 version = "1.0.0"
 dependencies = [
+ "backtrace",
  "clru",
  "cosmwasm-crypto",
  "cosmwasm-std",
