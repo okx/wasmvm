@@ -131,6 +131,7 @@ func (vm *VM) Instantiate(
 		return nil, 0, err
 	}
 	data, gasUsed, err := api.Instantiate(vm.cache, checksum, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	fmt.Printf("-------wasmvm instantiate -0--%d\n", gasUsed)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -140,6 +141,7 @@ func (vm *VM) Instantiate(
 		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
 	}
 	gasUsed += gasForDeserialization
+	fmt.Printf("-------wasmvm instantiate -1--%d\n", gasUsed)
 
 	var result types.ContractResult
 	err = json.Unmarshal(data, &result)
