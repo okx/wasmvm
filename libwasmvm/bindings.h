@@ -352,7 +352,11 @@ struct UnmanagedVector instantiate(struct cache_t *cache,
                                    uint64_t gas_limit,
                                    bool print_debug,
                                    uint64_t *gas_used,
-                                   struct UnmanagedVector *error_msg);
+                                   struct UnmanagedVector *error_msg,
+                                   int64_t write_cost_flat,
+                                   uint64_t write_cost_per_byte,
+                                   uint64_t delete_cost,
+                                   uint64_t gas_mul);
 
 struct UnmanagedVector execute(struct cache_t *cache,
                                struct ByteSliceView checksum,
@@ -365,7 +369,11 @@ struct UnmanagedVector execute(struct cache_t *cache,
                                uint64_t gas_limit,
                                bool print_debug,
                                uint64_t *gas_used,
-                               struct UnmanagedVector *error_msg);
+                               struct UnmanagedVector *error_msg,
+                               int64_t write_cost_flat,
+                               uint64_t write_cost_per_byte,
+                               uint64_t delete_cost,
+                               uint64_t gas_mul);
 
 struct UnmanagedVector migrate(struct cache_t *cache,
                                struct ByteSliceView checksum,

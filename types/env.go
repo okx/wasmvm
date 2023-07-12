@@ -41,3 +41,10 @@ type MessageInfo struct {
 	// Amount of funds send to the contract along with this message
 	Funds Coins `json:"funds"`
 }
+
+type GasInfo struct {
+	WriteCostFlat    uint64 `json:"write_cost_flat"`
+	WriteCostPerByte uint64 `json:"write_cost_per_byte"`
+	DeleteCost       uint64 `json:"delete_cost"`
+	GasMultiplier    uint64 `json:"gas_multiplier"`
+}

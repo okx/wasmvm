@@ -161,6 +161,7 @@ func Instantiate(
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
+	gasInfo types.GasInfo,
 ) ([]byte, uint64, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
@@ -181,7 +182,11 @@ func Instantiate(
 	var gasUsed cu64
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.instantiate(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	writeCostFlat := gasInfo.WriteCostFlat
+	writeCostPerByte := gasInfo.WriteCostPerByte
+	deleteCost := gasInfo.DeleteCost
+	gasMul := gasInfo.GasMultiplier
+	res, err := C.instantiate(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg, cu64(writeCostFlat), cu64(writeCostPerByte), cu64(deleteCost), cu64(gasMul))
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -201,6 +206,7 @@ func Execute(
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
+	gasInfo types.GasInfo,
 ) ([]byte, uint64, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
@@ -221,7 +227,11 @@ func Execute(
 	var gasUsed cu64
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.execute(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	writeCostFlat := gasInfo.WriteCostFlat
+	writeCostPerByte := gasInfo.WriteCostPerByte
+	deleteCost := gasInfo.DeleteCost
+	gasMul := gasInfo.GasMultiplier
+	res, err := C.execute(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg, cu64(writeCostFlat), cu64(writeCostPerByte), cu64(deleteCost), cu64(gasMul))
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)

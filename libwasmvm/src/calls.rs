@@ -41,6 +41,10 @@ pub extern "C" fn instantiate(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
+    write_cost_flat: u64,
+    write_cost_per_byte: u64,
+    delete_cost:u64,
+    gas_mul: u64,
 ) -> UnmanagedVector {
     call_3_args(
         call_instantiate_raw,
@@ -56,6 +60,10 @@ pub extern "C" fn instantiate(
         print_debug,
         gas_used,
         error_msg,
+        write_cost_flat,
+        write_cost_per_byte,
+        delete_cost,
+        gas_mul,
     )
 }
 
@@ -73,6 +81,10 @@ pub extern "C" fn execute(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
+    write_cost_flat: u64,
+    write_cost_per_byte: u64,
+    delete_cost:u64,
+    gas_mul: u64,
 ) -> UnmanagedVector {
     call_3_args(
         call_execute_raw,
@@ -88,6 +100,10 @@ pub extern "C" fn execute(
         print_debug,
         gas_used,
         error_msg,
+        write_cost_flat,
+        write_cost_per_byte,
+        delete_cost,
+        gas_mul,
     )
 }
 
@@ -462,10 +478,18 @@ fn do_call_2_args(
     let arg1 = arg1.read().ok_or_else(|| Error::unset_arg(ARG1))?;
     let arg2 = arg2.read().ok_or_else(|| Error::unset_arg(ARG2))?;
 
+    let write_cost_flat: u64 = 0;
+    let write_cost_per_byte: u64 = 0;
+    let delete_cost:u64 = 0;
+    let gas_mul: u64 = 0;
     let backend = into_backend(db, api, querier);
     let options = InstanceOptions {
         gas_limit,
         print_debug,
+        write_cost_flat,
+        write_cost_per_byte,
+        delete_cost,
+        gas_mul,
     };
     let mut instance = cache.get_instance(&checksum, backend, options)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
@@ -499,6 +523,10 @@ fn call_3_args(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
+    write_cost_flat: u64,
+    write_cost_per_byte: u64,
+    delete_cost:u64,
+    gas_mul: u64,
 ) -> UnmanagedVector {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
@@ -515,6 +543,10 @@ fn call_3_args(
                 gas_limit,
                 print_debug,
                 gas_used,
+                write_cost_flat,
+                write_cost_per_byte,
+                delete_cost,
+                gas_mul,
             )
         }))
         .unwrap_or_else(|err| {
@@ -540,6 +572,10 @@ fn do_call_3_args(
     gas_limit: u64,
     print_debug: bool,
     gas_used: Option<&mut u64>,
+    write_cost_flat: u64,
+    write_cost_per_byte: u64,
+    delete_cost:u64,
+    gas_mul: u64,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
     let checksum: Checksum = checksum
@@ -554,6 +590,10 @@ fn do_call_3_args(
     let options = InstanceOptions {
         gas_limit,
         print_debug,
+        write_cost_flat,
+        write_cost_per_byte,
+        delete_cost,
+        gas_mul,
     };
     let mut instance = cache.get_instance(&checksum, backend, options)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.

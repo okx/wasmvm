@@ -121,6 +121,7 @@ func (vm *VM) Instantiate(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
+	gasInfo types.GasInfo,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -130,7 +131,7 @@ func (vm *VM) Instantiate(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Instantiate(vm.cache, checksum, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.Instantiate(vm.cache, checksum, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, gasInfo)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -169,6 +170,7 @@ func (vm *VM) Execute(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
+	gasInfo types.GasInfo,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -178,7 +180,7 @@ func (vm *VM) Execute(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Execute(vm.cache, checksum, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.Execute(vm.cache, checksum, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, gasInfo)
 	if err != nil {
 		return nil, gasUsed, err
 	}
