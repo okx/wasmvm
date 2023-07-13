@@ -249,7 +249,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-crypto"
 version = "1.3.0-rc.0"
-source = "git+https://github.com/okx/cosmwasm.git?branch=prs#c5e58fcb130dd67408621391494689d70032e50e"
+source = "git+https://github.com/okx/cosmwasm.git?branch=prs#f2a1a024a4a955c2975d265f0fb05b93cf8c54ff"
 dependencies = [
  "digest 0.10.7",
  "ed25519-zebra",
@@ -261,7 +261,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-derive"
 version = "1.3.0-rc.0"
-source = "git+https://github.com/okx/cosmwasm.git?branch=prs#c5e58fcb130dd67408621391494689d70032e50e"
+source = "git+https://github.com/okx/cosmwasm.git?branch=prs#f2a1a024a4a955c2975d265f0fb05b93cf8c54ff"
 dependencies = [
  "syn 1.0.109",
 ]
@@ -269,7 +269,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-std"
 version = "1.3.0-rc.0"
-source = "git+https://github.com/okx/cosmwasm.git?branch=prs#c5e58fcb130dd67408621391494689d70032e50e"
+source = "git+https://github.com/okx/cosmwasm.git?branch=prs#f2a1a024a4a955c2975d265f0fb05b93cf8c54ff"
 dependencies = [
  "base64",
  "bnum",
@@ -288,7 +288,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm"
 version = "1.3.0-rc.0"
-source = "git+https://github.com/okx/cosmwasm.git?branch=prs#c5e58fcb130dd67408621391494689d70032e50e"
+source = "git+https://github.com/okx/cosmwasm.git?branch=prs#f2a1a024a4a955c2975d265f0fb05b93cf8c54ff"
 dependencies = [
  "bitflags",
  "bytecheck",
