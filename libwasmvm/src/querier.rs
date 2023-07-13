@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, ContractResult, SystemError, SystemResult};
+use cosmwasm_std::{Addr, Binary, ContractResult, SystemError, SystemResult};
 use cosmwasm_vm::{BackendError, BackendResult, GasInfo, Querier, Storage, VmError};
 
 use crate::error::GoError;
@@ -180,7 +180,7 @@ impl Querier for GoQuerier {
         }
 
         let api = unsafe{(*res_api).clone()};
-        let (result, gas_info) = do_call(env1, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit);
+        let (result, gas_info) = do_call(env1, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit, Addr::unchecked(contract_address.clone()));
 
         (self.vtable.release)(unsafe{(*res_store).state});
 
@@ -260,7 +260,7 @@ impl Querier for GoQuerier {
         }
 
         let api = unsafe{(*res_api).clone()};
-        let (result, gas_info) = do_call(env, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit);
+        let (result, gas_info) = do_call(env, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit, env.delegate_contract_addr.clone());
 
         (self.vtable.release)(unsafe{(*res_store).state});
 
@@ -279,6 +279,7 @@ pub fn do_call<A: BackendApi, S: Storage, Q: Querier>(
     call_msg: &[u8],
     checksum: [u8; 32],
     gas_limit: u64,
+    delegate_contract_addr: Addr,
 ) -> (VmResult<Vec<u8>>, GasInfo) {
     let backend = Backend {
         api: api,
@@ -295,7 +296,7 @@ pub fn do_call<A: BackendApi, S: Storage, Q: Querier>(
     let param = InternalCallParam {
         call_depth: env.call_depth + 1,
         sender_addr: env.sender_addr.clone(),
-        delegate_contract_addr: env.delegate_contract_addr.clone()
+        delegate_contract_addr: delegate_contract_addr
     };
     let new_instance = cache.get_instance_ex(&Checksum::from(checksum), backend, ins_options, param);
     match new_instance {
