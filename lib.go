@@ -3,6 +3,7 @@ package cosmwasm
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/CosmWasm/wasmvm/api/v1"
 
 	"github.com/CosmWasm/wasmvm/api"
 	"github.com/CosmWasm/wasmvm/types"
@@ -15,22 +16,22 @@ type Checksum []byte
 type WasmCode []byte
 
 // KVStore is a reference to some sub-kvstore that is valid for one instance of a code
-type KVStore = api.KVStore
+type KVStore = v1.KVStore
 
 // GoAPI is a reference to some "precompiles", go callbacks
-type GoAPI = api.GoAPI
+type GoAPI = v1.GoAPI
 
 // Querier lets us make read-only queries on other modules
 type Querier = types.Querier
 
 // GasMeter is a read-only version of the sdk gas meter
-type GasMeter = api.GasMeter
+type GasMeter = v1.GasMeter
 
 // VM is the main entry point to this library.
 // You should create an instance with its own subdirectory to manage state inside,
 // and call it for all cosmwasm code related actions.
 type VM struct {
-	cache      api.Cache
+	cache      v1.Cache
 	printDebug bool
 }
 
@@ -637,5 +638,5 @@ func (vm *VM) IBCPacketTimeout(
 // at runtime. This can be used for debugging to verify the loaded version
 // matches the expected version.
 func LibwasmvmVersion() (string, error) {
-	return api.LibwasmvmVersion()
+	return v1.LibwasmvmVersion()
 }

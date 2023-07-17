@@ -48,7 +48,7 @@ build-rust-debug:
 # enable stripping through cargo (if that is desired).
 build-rust-release:
 	(cd libwasmvm && cargo build --release)
-	cp libwasmvm/target/release/$(SHARED_LIB_SRC) api/$(SHARED_LIB_DST)
+	cp libwasmvm/target/release/$(SHARED_LIB_SRC) api/v1/$(SHARED_LIB_DST)
 	make update-bindings
 	@ #this pulls out ELF symbols, 80% size reduction!
 
@@ -95,7 +95,7 @@ release-build-macos:
 update-bindings:
 	# After we build libwasmvm, we have to copy the generated bindings for Go code to use.
 	# We cannot use symlinks as those are not reliably resolved by `go get` (https://github.com/CosmWasm/wasmvm/pull/235).
-	cp libwasmvm/bindings.h api
+	cp libwasmvm/bindings.h api/v1
 
 release-build:
 	# Write like this because those must not run in parallel
