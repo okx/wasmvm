@@ -295,7 +295,7 @@ pub fn do_call<A: BackendApi, S: Storage, Q: Querier>(
     let cache = unsafe { &mut *(cache as *mut Cache<GoApi, GoStorage, GoQuerier>) };
     let param = InternalCallParam {
         call_depth: env.call_depth + 1,
-        sender_addr: env.sender_addr.clone(),
+        sender_addr: info.sender.clone(),
         delegate_contract_addr: delegate_contract_addr
     };
     let new_instance = cache.get_instance_ex(&Checksum::from(checksum), backend, ins_options, param);
