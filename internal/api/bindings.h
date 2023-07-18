@@ -352,7 +352,8 @@ struct UnmanagedVector instantiate(struct cache_t *cache,
                                    uint64_t gas_limit,
                                    bool print_debug,
                                    uint64_t *gas_used,
-                                   struct UnmanagedVector *error_msg);
+                                   struct UnmanagedVector *error_msg,
+                                   uint64_t block_heigh);
 
 struct UnmanagedVector execute(struct cache_t *cache,
                                struct ByteSliceView checksum,
@@ -365,7 +366,8 @@ struct UnmanagedVector execute(struct cache_t *cache,
                                uint64_t gas_limit,
                                bool print_debug,
                                uint64_t *gas_used,
-                               struct UnmanagedVector *error_msg);
+                               struct UnmanagedVector *error_msg,
+                               uint64_t block_heigh);
 
 struct UnmanagedVector migrate(struct cache_t *cache,
                                struct ByteSliceView checksum,
@@ -377,7 +379,8 @@ struct UnmanagedVector migrate(struct cache_t *cache,
                                uint64_t gas_limit,
                                bool print_debug,
                                uint64_t *gas_used,
-                               struct UnmanagedVector *error_msg);
+                               struct UnmanagedVector *error_msg,
+                               uint64_t block_heigh);
 
 struct UnmanagedVector sudo(struct cache_t *cache,
                             struct ByteSliceView checksum,
@@ -389,7 +392,8 @@ struct UnmanagedVector sudo(struct cache_t *cache,
                             uint64_t gas_limit,
                             bool print_debug,
                             uint64_t *gas_used,
-                            struct UnmanagedVector *error_msg);
+                            struct UnmanagedVector *error_msg,
+                            uint64_t block_heigh);
 
 struct UnmanagedVector reply(struct cache_t *cache,
                              struct ByteSliceView checksum,
@@ -401,7 +405,8 @@ struct UnmanagedVector reply(struct cache_t *cache,
                              uint64_t gas_limit,
                              bool print_debug,
                              uint64_t *gas_used,
-                             struct UnmanagedVector *error_msg);
+                             struct UnmanagedVector *error_msg,
+                             uint64_t block_heigh);
 
 struct UnmanagedVector query(struct cache_t *cache,
                              struct ByteSliceView checksum,
@@ -413,7 +418,8 @@ struct UnmanagedVector query(struct cache_t *cache,
                              uint64_t gas_limit,
                              bool print_debug,
                              uint64_t *gas_used,
-                             struct UnmanagedVector *error_msg);
+                             struct UnmanagedVector *error_msg,
+                             uint64_t block_heigh);
 
 struct UnmanagedVector ibc_channel_open(struct cache_t *cache,
                                         struct ByteSliceView checksum,
@@ -425,7 +431,8 @@ struct UnmanagedVector ibc_channel_open(struct cache_t *cache,
                                         uint64_t gas_limit,
                                         bool print_debug,
                                         uint64_t *gas_used,
-                                        struct UnmanagedVector *error_msg);
+                                        struct UnmanagedVector *error_msg,
+                                        uint64_t block_heigh);
 
 struct UnmanagedVector ibc_channel_connect(struct cache_t *cache,
                                            struct ByteSliceView checksum,
@@ -437,7 +444,8 @@ struct UnmanagedVector ibc_channel_connect(struct cache_t *cache,
                                            uint64_t gas_limit,
                                            bool print_debug,
                                            uint64_t *gas_used,
-                                           struct UnmanagedVector *error_msg);
+                                           struct UnmanagedVector *error_msg,
+                                           uint64_t block_heigh);
 
 struct UnmanagedVector ibc_channel_close(struct cache_t *cache,
                                          struct ByteSliceView checksum,
@@ -449,7 +457,8 @@ struct UnmanagedVector ibc_channel_close(struct cache_t *cache,
                                          uint64_t gas_limit,
                                          bool print_debug,
                                          uint64_t *gas_used,
-                                         struct UnmanagedVector *error_msg);
+                                         struct UnmanagedVector *error_msg,
+                                         uint64_t block_heigh);
 
 struct UnmanagedVector ibc_packet_receive(struct cache_t *cache,
                                           struct ByteSliceView checksum,
@@ -461,7 +470,8 @@ struct UnmanagedVector ibc_packet_receive(struct cache_t *cache,
                                           uint64_t gas_limit,
                                           bool print_debug,
                                           uint64_t *gas_used,
-                                          struct UnmanagedVector *error_msg);
+                                          struct UnmanagedVector *error_msg,
+                                          uint64_t block_heigh);
 
 struct UnmanagedVector ibc_packet_ack(struct cache_t *cache,
                                       struct ByteSliceView checksum,
@@ -473,7 +483,8 @@ struct UnmanagedVector ibc_packet_ack(struct cache_t *cache,
                                       uint64_t gas_limit,
                                       bool print_debug,
                                       uint64_t *gas_used,
-                                      struct UnmanagedVector *error_msg);
+                                      struct UnmanagedVector *error_msg,
+                                      uint64_t block_heigh);
 
 struct UnmanagedVector ibc_packet_timeout(struct cache_t *cache,
                                           struct ByteSliceView checksum,
@@ -485,7 +496,8 @@ struct UnmanagedVector ibc_packet_timeout(struct cache_t *cache,
                                           uint64_t gas_limit,
                                           bool print_debug,
                                           uint64_t *gas_used,
-                                          struct UnmanagedVector *error_msg);
+                                          struct UnmanagedVector *error_msg,
+                                          uint64_t block_heigh);
 
 struct UnmanagedVector new_unmanaged_vector(bool nil, const uint8_t *ptr, uintptr_t length);
 
