@@ -1,11 +1,9 @@
 package api
 
-// #include <stdlib.h>
-// #include "v1/bindings.h"
-import "C"
-
 import (
+	"github.com/CosmWasm/wasmvm/api/utils"
 	"github.com/CosmWasm/wasmvm/api/v1"
+	"github.com/CosmWasm/wasmvm/api/v2"
 	"github.com/CosmWasm/wasmvm/types"
 )
 
@@ -13,6 +11,10 @@ type Querier = types.Querier
 
 func InitCache(dataDir string, supportedFeatures string, cacheSize uint32, instanceMemoryLimit uint32) (v1.Cache, error) {
 	return v1.InitCache(dataDir, supportedFeatures, cacheSize, instanceMemoryLimit)
+}
+
+func InitCache_2(dataDir string, supportedFeatures string, cacheSize uint32, instanceMemoryLimit uint32) (v2.Cache, error) {
+	return v2.InitCache(dataDir, supportedFeatures, cacheSize, instanceMemoryLimit)
 }
 
 func ReleaseCache(cache v1.Cache) {
@@ -49,9 +51,9 @@ func Instantiate(
 	env []byte,
 	info []byte,
 	msg []byte,
-	gasMeter *v1.GasMeter,
-	store v1.KVStore,
-	api *v1.GoAPI,
+	gasMeter *utils.GasMeter,
+	store utils.KVStore,
+	api *utils.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -65,9 +67,9 @@ func Execute(
 	env []byte,
 	info []byte,
 	msg []byte,
-	gasMeter *v1.GasMeter,
-	store v1.KVStore,
-	api *v1.GoAPI,
+	gasMeter *utils.GasMeter,
+	store utils.KVStore,
+	api *utils.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -75,14 +77,30 @@ func Execute(
 	return v1.Execute(cache, checksum, env, info, msg, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
+func Execute2(
+	cache v2.Cache,
+	checksum []byte,
+	env []byte,
+	info []byte,
+	msg []byte,
+	gasMeter *utils.GasMeter,
+	store utils.KVStore,
+	api *utils.GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+	printDebug bool,
+) ([]byte, uint64, error) {
+	return v2.Execute(cache, checksum, env, info, msg, gasMeter, store, api, querier, gasLimit, printDebug)
+}
+
 func Migrate(
 	cache v1.Cache,
 	checksum []byte,
 	env []byte,
 	msg []byte,
-	gasMeter *v1.GasMeter,
-	store v1.KVStore,
-	api *v1.GoAPI,
+	gasMeter *utils.GasMeter,
+	store utils.KVStore,
+	api *utils.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -95,9 +113,9 @@ func Sudo(
 	checksum []byte,
 	env []byte,
 	msg []byte,
-	gasMeter *v1.GasMeter,
-	store v1.KVStore,
-	api *v1.GoAPI,
+	gasMeter *utils.GasMeter,
+	store utils.KVStore,
+	api *utils.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -110,9 +128,9 @@ func Reply(
 	checksum []byte,
 	env []byte,
 	reply []byte,
-	gasMeter *v1.GasMeter,
-	store v1.KVStore,
-	api *v1.GoAPI,
+	gasMeter *utils.GasMeter,
+	store utils.KVStore,
+	api *utils.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -125,9 +143,9 @@ func Query(
 	checksum []byte,
 	env []byte,
 	msg []byte,
-	gasMeter *v1.GasMeter,
-	store v1.KVStore,
-	api *v1.GoAPI,
+	gasMeter *utils.GasMeter,
+	store utils.KVStore,
+	api *utils.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -140,9 +158,9 @@ func IBCChannelOpen(
 	checksum []byte,
 	env []byte,
 	msg []byte,
-	gasMeter *v1.GasMeter,
-	store v1.KVStore,
-	api *v1.GoAPI,
+	gasMeter *utils.GasMeter,
+	store utils.KVStore,
+	api *utils.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -155,9 +173,9 @@ func IBCChannelConnect(
 	checksum []byte,
 	env []byte,
 	msg []byte,
-	gasMeter *v1.GasMeter,
-	store v1.KVStore,
-	api *v1.GoAPI,
+	gasMeter *utils.GasMeter,
+	store utils.KVStore,
+	api *utils.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -170,9 +188,9 @@ func IBCChannelClose(
 	checksum []byte,
 	env []byte,
 	msg []byte,
-	gasMeter *v1.GasMeter,
-	store v1.KVStore,
-	api *v1.GoAPI,
+	gasMeter *utils.GasMeter,
+	store utils.KVStore,
+	api *utils.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -185,9 +203,9 @@ func IBCPacketReceive(
 	checksum []byte,
 	env []byte,
 	packet []byte,
-	gasMeter *v1.GasMeter,
-	store v1.KVStore,
-	api *v1.GoAPI,
+	gasMeter *utils.GasMeter,
+	store utils.KVStore,
+	api *utils.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -200,9 +218,9 @@ func IBCPacketAck(
 	checksum []byte,
 	env []byte,
 	ack []byte,
-	gasMeter *v1.GasMeter,
-	store v1.KVStore,
-	api *v1.GoAPI,
+	gasMeter *utils.GasMeter,
+	store utils.KVStore,
+	api *utils.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -215,9 +233,9 @@ func IBCPacketTimeout(
 	checksum []byte,
 	env []byte,
 	packet []byte,
-	gasMeter *v1.GasMeter,
-	store v1.KVStore,
-	api *v1.GoAPI,
+	gasMeter *utils.GasMeter,
+	store utils.KVStore,
+	api *utils.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,

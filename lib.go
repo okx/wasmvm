@@ -3,7 +3,9 @@ package cosmwasm
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/CosmWasm/wasmvm/api/utils"
 	"github.com/CosmWasm/wasmvm/api/v1"
+	v2 "github.com/CosmWasm/wasmvm/api/v2"
 
 	"github.com/CosmWasm/wasmvm/api"
 	"github.com/CosmWasm/wasmvm/types"
@@ -16,22 +18,23 @@ type Checksum []byte
 type WasmCode []byte
 
 // KVStore is a reference to some sub-kvstore that is valid for one instance of a code
-type KVStore = v1.KVStore
+type KVStore = utils.KVStore
 
 // GoAPI is a reference to some "precompiles", go callbacks
-type GoAPI = v1.GoAPI
+type GoAPI = utils.GoAPI
 
 // Querier lets us make read-only queries on other modules
 type Querier = types.Querier
 
 // GasMeter is a read-only version of the sdk gas meter
-type GasMeter = v1.GasMeter
+type GasMeter = utils.GasMeter
 
 // VM is the main entry point to this library.
 // You should create an instance with its own subdirectory to manage state inside,
 // and call it for all cosmwasm code related actions.
 type VM struct {
 	cache      v1.Cache
+	cache_2    v2.Cache
 	printDebug bool
 }
 
@@ -48,7 +51,12 @@ func NewVM(dataDir string, supportedFeatures string, memoryLimit uint32, printDe
 	if err != nil {
 		return nil, err
 	}
-	return &VM{cache: cache, printDebug: printDebug}, nil
+
+	cache_2, err := api.InitCache_2(dataDir, supportedFeatures, cacheSize, memoryLimit)
+	if err != nil {
+		return nil, err
+	}
+	return &VM{cache: cache, cache_2: cache_2, printDebug: printDebug}, nil
 }
 
 // Cleanup should be called when no longer using this to free resources on the rust-side
@@ -184,6 +192,7 @@ func (vm *VM) Execute(
 	if err != nil {
 		return nil, 0, err
 	}
+	api.Execute2(vm.cache_2, checksum, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	data, gasUsed, err := api.Execute(vm.cache, checksum, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err

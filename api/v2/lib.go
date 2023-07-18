@@ -1,4 +1,4 @@
-package v1
+package v2
 
 import "C"
 import (
@@ -168,7 +168,8 @@ func Execute(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	fmt.Println("---zjg------------Execute--v1")
+	fmt.Println("---zjg------------Execute--v2")
+	return nil, 0, nil
 
 	cs := MakeView(checksum)
 	defer runtime.KeepAlive(checksum)
