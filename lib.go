@@ -7,7 +7,6 @@ import (
 	"github.com/CosmWasm/wasmvm/api/v1"
 	v2 "github.com/CosmWasm/wasmvm/api/v2"
 
-	"github.com/CosmWasm/wasmvm/api"
 	"github.com/CosmWasm/wasmvm/types"
 )
 
@@ -34,7 +33,7 @@ type GasMeter = utils.GasMeter
 // and call it for all cosmwasm code related actions.
 type VM struct {
 	cache      v1.Cache
-	cache_2    v2.Cache
+	cacheV2    v2.Cache
 	printDebug bool
 }
 
@@ -47,21 +46,28 @@ type VM struct {
 // `cacheSize` sets the size in MiB of an in-memory cache for e.g. module caching. Set to 0 to disable.
 // `deserCost` sets the gas cost of deserializing one byte of data.
 func NewVM(dataDir string, supportedFeatures string, memoryLimit uint32, printDebug bool, cacheSize uint32) (*VM, error) {
-	cache, err := api.InitCache(dataDir, supportedFeatures, cacheSize, memoryLimit)
+	cache, err := v1.InitCache(dataDir, supportedFeatures, cacheSize, memoryLimit)
 	if err != nil {
 		return nil, err
 	}
 
-	cache_2, err := api.InitCache_2(dataDir, supportedFeatures, cacheSize, memoryLimit)
+	cacheV2, err := v2.InitCache(dataDir, supportedFeatures, cacheSize, memoryLimit)
 	if err != nil {
 		return nil, err
 	}
-	return &VM{cache: cache, cache_2: cache_2, printDebug: printDebug}, nil
+	return &VM{cache: cache, cacheV2: cacheV2, printDebug: printDebug}, nil
 }
 
 // Cleanup should be called when no longer using this to free resources on the rust-side
-func (vm *VM) Cleanup() {
-	api.ReleaseCache(vm.cache)
+func (vm *VM) Cleanup(version int) {
+	if version == 1 {
+		v1.ReleaseCache(vm.cache)
+	} else if version == 2 {
+		v2.ReleaseCache(vm.cacheV2)
+	} else {
+		v1.ReleaseCache(vm.cache)
+		v2.ReleaseCache(vm.cacheV2)
+	}
 }
 
 // Create will compile the wasm code, and store the resulting pre-compile
@@ -74,8 +80,12 @@ func (vm *VM) Cleanup() {
 // be instantiated with custom inputs in the future.
 //
 // TODO: return gas cost? Add gas limit??? there is no metering here...
-func (vm *VM) Create(code WasmCode) (Checksum, error) {
-	return api.Create(vm.cache, code)
+func (vm *VM) Create(code WasmCode, version int) (Checksum, error) {
+	if version == 1 {
+		return v1.Create(vm.cache, code)
+	} else {
+		return v2.Create(vm.cacheV2, code)
+	}
 }
 
 // GetCode will load the original wasm code for the given code id.
@@ -85,35 +95,55 @@ func (vm *VM) Create(code WasmCode) (Checksum, error) {
 // This can be used so that the (short) code id (hash) is stored in the iavl tree
 // and the larger binary blobs (wasm and pre-compiles) are all managed by the
 // rust library
-func (vm *VM) GetCode(checksum Checksum) (WasmCode, error) {
-	return api.GetCode(vm.cache, checksum)
+func (vm *VM) GetCode(checksum Checksum, version int) (WasmCode, error) {
+	if version == 1 {
+		return v1.GetCode(vm.cache, checksum)
+	} else {
+		return v2.GetCode(vm.cacheV2, checksum)
+	}
 }
 
 // Pin pins a code to an in-memory cache, such that is
 // always loaded quickly when executed.
 // Pin is idempotent.
-func (vm *VM) Pin(checksum Checksum) error {
-	return api.Pin(vm.cache, checksum)
+func (vm *VM) Pin(checksum Checksum, version int) error {
+	if version == 1 {
+		return v1.Pin(vm.cache, checksum)
+	} else {
+		return v2.Pin(vm.cacheV2, checksum)
+	}
 }
 
 // Unpin removes the guarantee of a contract to be pinned (see Pin).
 // After calling this, the code may or may not remain in memory depending on
 // the implementor's choice.
 // Unpin is idempotent.
-func (vm *VM) Unpin(checksum Checksum) error {
-	return api.Unpin(vm.cache, checksum)
+func (vm *VM) Unpin(checksum Checksum, version int) error {
+	if version == 1 {
+		return v1.Unpin(vm.cache, checksum)
+	} else {
+		return v2.Unpin(vm.cacheV2, checksum)
+	}
 }
 
 // Returns a report of static analysis of the wasm contract (uncompiled).
 // This contract must have been stored in the cache previously (via Create).
 // Only info currently returned is if it exposes all ibc entry points, but this may grow later
-func (vm *VM) AnalyzeCode(checksum Checksum) (*types.AnalysisReport, error) {
-	return api.AnalyzeCode(vm.cache, checksum)
+func (vm *VM) AnalyzeCode(checksum Checksum, version int) (*types.AnalysisReport, error) {
+	if version == 1 {
+		return v1.AnalyzeCode(vm.cache, checksum)
+	} else {
+		return v2.AnalyzeCode(vm.cacheV2, checksum)
+	}
 }
 
 // GetMetrics some internal metrics for monitoring purposes.
-func (vm *VM) GetMetrics() (*types.Metrics, error) {
-	return api.GetMetrics(vm.cache)
+func (vm *VM) GetMetrics(version int) (*types.Metrics, error) {
+	if version == 1 {
+		return v1.GetMetrics(vm.cache)
+	} else {
+		return v2.GetMetrics(vm.cacheV2)
+	}
 }
 
 // Instantiate will create a new contract based on the given Checksum.
@@ -135,6 +165,7 @@ func (vm *VM) Instantiate(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
+	version int,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -144,9 +175,18 @@ func (vm *VM) Instantiate(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Instantiate(vm.cache, checksum, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
-	if err != nil {
-		return nil, gasUsed, err
+	var data []byte
+	var gasUsed uint64
+	if version == 1 {
+		data, gasUsed, err = v1.Instantiate(vm.cache, checksum, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
+	} else {
+		data, gasUsed, err = v2.Instantiate(vm.cacheV2, checksum, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
 	}
 
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
@@ -183,6 +223,7 @@ func (vm *VM) Execute(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
+	version int,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -192,10 +233,20 @@ func (vm *VM) Execute(
 	if err != nil {
 		return nil, 0, err
 	}
-	api.Execute2(vm.cache_2, checksum, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
-	data, gasUsed, err := api.Execute(vm.cache, checksum, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
-	if err != nil {
-		return nil, gasUsed, err
+
+	var data []byte
+	var gasUsed uint64
+
+	if version == 1 {
+		data, gasUsed, err = v1.Execute(vm.cache, checksum, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
+	} else {
+		data, gasUsed, err = v2.Execute(vm.cacheV2, checksum, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
 	}
 
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
@@ -228,14 +279,24 @@ func (vm *VM) Query(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
+	version int,
 ) ([]byte, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Query(vm.cache, checksum, envBin, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
-	if err != nil {
-		return nil, gasUsed, err
+	var data []byte
+	var gasUsed uint64
+	if version == 1 {
+		data, gasUsed, err = v1.Query(vm.cache, checksum, envBin, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
+	} else {
+		data, gasUsed, err = v2.Query(vm.cacheV2, checksum, envBin, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
 	}
 
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
@@ -271,14 +332,25 @@ func (vm *VM) Migrate(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
+	version int,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Migrate(vm.cache, checksum, envBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
-	if err != nil {
-		return nil, gasUsed, err
+
+	var data []byte
+	var gasUsed uint64
+	if version == 1 {
+		data, gasUsed, err = v1.Migrate(vm.cache, checksum, envBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
+	} else {
+		data, gasUsed, err = v2.Migrate(vm.cacheV2, checksum, envBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
 	}
 
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
@@ -314,14 +386,24 @@ func (vm *VM) Sudo(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
+	version int,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Sudo(vm.cache, checksum, envBin, sudoMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
-	if err != nil {
-		return nil, gasUsed, err
+	var data []byte
+	var gasUsed uint64
+	if version == 1 {
+		data, gasUsed, err = v1.Sudo(vm.cache, checksum, envBin, sudoMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
+	} else {
+		data, gasUsed, err = v2.Sudo(vm.cacheV2, checksum, envBin, sudoMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
 	}
 
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
@@ -355,6 +437,7 @@ func (vm *VM) Reply(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
+	version int,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -364,9 +447,19 @@ func (vm *VM) Reply(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Reply(vm.cache, checksum, envBin, replyBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
-	if err != nil {
-		return nil, gasUsed, err
+
+	var data []byte
+	var gasUsed uint64
+	if version == 1 {
+		data, gasUsed, err = v1.Reply(vm.cache, checksum, envBin, replyBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
+	} else {
+		data, gasUsed, err = v2.Reply(vm.cacheV2, checksum, envBin, replyBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
 	}
 
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
@@ -398,6 +491,7 @@ func (vm *VM) IBCChannelOpen(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
+	version int,
 ) (*types.IBC3ChannelOpenResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -407,9 +501,18 @@ func (vm *VM) IBCChannelOpen(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCChannelOpen(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
-	if err != nil {
-		return nil, gasUsed, err
+	var data []byte
+	var gasUsed uint64
+	if version == 1 {
+		data, gasUsed, err = v1.IBCChannelOpen(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
+	} else {
+		data, gasUsed, err = v2.IBCChannelOpen(vm.cacheV2, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
 	}
 
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
@@ -441,6 +544,7 @@ func (vm *VM) IBCChannelConnect(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
+	version int,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -450,9 +554,19 @@ func (vm *VM) IBCChannelConnect(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCChannelConnect(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
-	if err != nil {
-		return nil, gasUsed, err
+
+	var data []byte
+	var gasUsed uint64
+	if version == 1 {
+		data, gasUsed, err = v1.IBCChannelConnect(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
+	} else {
+		data, gasUsed, err = v2.IBCChannelConnect(vm.cacheV2, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
 	}
 
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
@@ -484,6 +598,7 @@ func (vm *VM) IBCChannelClose(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
+	version int,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -493,9 +608,19 @@ func (vm *VM) IBCChannelClose(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCChannelClose(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
-	if err != nil {
-		return nil, gasUsed, err
+
+	var data []byte
+	var gasUsed uint64
+	if version == 1 {
+		data, gasUsed, err = v1.IBCChannelClose(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
+	} else {
+		data, gasUsed, err = v2.IBCChannelClose(vm.cacheV2, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
 	}
 
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
@@ -527,6 +652,7 @@ func (vm *VM) IBCPacketReceive(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
+	version int,
 ) (*types.IBCReceiveResult, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -536,9 +662,19 @@ func (vm *VM) IBCPacketReceive(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCPacketReceive(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
-	if err != nil {
-		return nil, gasUsed, err
+
+	var data []byte
+	var gasUsed uint64
+	if version == 1 {
+		data, gasUsed, err = v1.IBCPacketReceive(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
+	} else {
+		data, gasUsed, err = v2.IBCPacketReceive(vm.cacheV2, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
 	}
 
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
@@ -568,6 +704,7 @@ func (vm *VM) IBCPacketAck(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
+	version int,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -577,9 +714,19 @@ func (vm *VM) IBCPacketAck(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCPacketAck(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
-	if err != nil {
-		return nil, gasUsed, err
+
+	var data []byte
+	var gasUsed uint64
+	if version == 1 {
+		data, gasUsed, err = v1.IBCPacketAck(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
+	} else {
+		data, gasUsed, err = v2.IBCPacketAck(vm.cacheV2, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
 	}
 
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
@@ -612,6 +759,7 @@ func (vm *VM) IBCPacketTimeout(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
+	version int,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -621,9 +769,19 @@ func (vm *VM) IBCPacketTimeout(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCPacketTimeout(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
-	if err != nil {
-		return nil, gasUsed, err
+
+	var data []byte
+	var gasUsed uint64
+	if version == 1 {
+		data, gasUsed, err = v1.IBCPacketTimeout(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
+	} else {
+		data, gasUsed, err = v2.IBCPacketTimeout(vm.cacheV2, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+		if err != nil {
+			return nil, gasUsed, err
+		}
 	}
 
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
@@ -646,6 +804,10 @@ func (vm *VM) IBCPacketTimeout(
 // LibwasmvmVersion returns the version of the loaded library
 // at runtime. This can be used for debugging to verify the loaded version
 // matches the expected version.
-func LibwasmvmVersion() (string, error) {
-	return v1.LibwasmvmVersion()
+func LibwasmvmVersion(version int) (string, error) {
+	if version == 1 {
+		return v1.LibwasmvmVersion()
+	} else {
+		return v2.LibwasmvmVersion()
+	}
 }
