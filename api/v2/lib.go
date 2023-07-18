@@ -169,7 +169,6 @@ func Execute(
 	printDebug bool,
 ) ([]byte, uint64, error) {
 	fmt.Println("---zjg------------Execute--v2")
-	return nil, 0, nil
 
 	cs := MakeView(checksum)
 	defer runtime.KeepAlive(checksum)
