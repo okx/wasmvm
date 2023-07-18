@@ -32,6 +32,7 @@ pub extern "C" fn init_cache(
     cache_size: u32,            // in MiB
     instance_memory_limit: u32, // in MiB
     error_msg: Option<&mut UnmanagedVector>,
+    milestones: ByteSliceView,
 ) -> *mut cache_t {
     let r = catch_unwind(|| {
         do_init_cache(
@@ -39,6 +40,7 @@ pub extern "C" fn init_cache(
             available_capabilities,
             cache_size,
             instance_memory_limit,
+            milestones,
         )
     })
     .unwrap_or_else(|err| {
@@ -53,6 +55,7 @@ fn do_init_cache(
     available_capabilities: ByteSliceView,
     cache_size: u32,            // in MiB
     instance_memory_limit: u32, // in MiB
+    milestones: ByteSliceView,
 ) -> Result<*mut Cache<GoApi, GoStorage, GoQuerier>, Error> {
     let dir = data_dir
         .read()
@@ -74,8 +77,20 @@ fn do_init_cache(
             .expect("Cannot convert u32 to usize. What kind of system is this?"),
     );
 
+
+    let milestones_temp = milestones
+        .read()
+        .ok_or_else(|| Error::unset_arg(DATA_DIR_ARG))?;
+    let milestone = String::from_utf8(milestones_temp.to_vec())?;
+
+    // let milestone = "v2:300,v3:400";
     let mut block_milestone = HashMap::new();
-    block_milestone.insert("v2".to_string(), 300 as u64);
+    for pair in milestone.split(',') {
+        let mut iter = pair.split(':');
+        let key = iter.next().unwrap().to_string();
+        let value = iter.next().unwrap().parse::<u64>().unwrap();
+        block_milestone.insert(key, value);
+    }
 
     let options = CacheOptions {
         base_dir: dir_str.into(),

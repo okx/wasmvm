@@ -307,7 +307,8 @@ struct cache_t *init_cache(struct ByteSliceView data_dir,
                            struct ByteSliceView available_capabilities,
                            uint32_t cache_size,
                            uint32_t instance_memory_limit,
-                           struct UnmanagedVector *error_msg);
+                           struct UnmanagedVector *error_msg,
+                           struct ByteSliceView milestones);
 
 struct UnmanagedVector save_wasm(struct cache_t *cache,
                                  struct ByteSliceView wasm,
