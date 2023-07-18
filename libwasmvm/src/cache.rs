@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
+use std::collections::HashMap;
 
 use cosmwasm_vm::{capabilities_from_csv, Cache, CacheOptions, Checksum, Size};
 
@@ -72,9 +73,14 @@ fn do_init_cache(
             .try_into()
             .expect("Cannot convert u32 to usize. What kind of system is this?"),
     );
+
+    let mut block_milestone = HashMap::new();
+    block_milestone.insert("v2".to_string(), 300 as u64);
+
     let options = CacheOptions {
         base_dir: dir_str.into(),
         available_capabilities: capabilities,
+        block_milestone: block_milestone,
         memory_cache_size,
         instance_memory_limit,
     };
