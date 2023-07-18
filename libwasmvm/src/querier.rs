@@ -33,6 +33,7 @@ pub struct Querier_vtable {
     ) -> i32,
     pub get_call_info: extern "C" fn (
         *const querier_t,
+        *mut u64,       // used gas
         U8SliceView,    // contract address
         U8SliceView,    // store address
         *mut UnmanagedVector,
@@ -123,7 +124,7 @@ impl Querier for GoQuerier {
     ) -> (VmResult<Vec<u8>>, GasInfo) {
         println!("rust wasmvm call contract_address: {:?} , sender address {:?}", contract_address, info.sender.clone());
 
-        let mut used_gas = 0_u64;
+        let mut tc_used_gas = 0_u64;
         // need check transfer
         if info.funds.len() != 0 {
             let mut error_msg = UnmanagedVector::default();
@@ -131,7 +132,7 @@ impl Querier for GoQuerier {
             println!("data is {:?}", String::from_utf8(coins.clone()).unwrap());
             let go_result: GoError = (self.vtable.transfer_coins)(
                 self.state,
-                &mut used_gas as *mut u64,
+                &mut tc_used_gas as *mut u64,
                 U8SliceView::new(Some(contract_address.as_bytes())),
                 U8SliceView::new(Some(info.sender.clone().as_bytes())),
                 U8SliceView::new(Some(coins.as_slice())),
@@ -145,7 +146,7 @@ impl Querier for GoQuerier {
             };
             unsafe {
                 if let Err(err) = go_result.into_result(error_msg, default) {
-                    return (Err(VmError::BackendErr { source: err }), GasInfo::with_externally_used(used_gas));
+                    return (Err(VmError::BackendErr { source: err }), GasInfo::with_externally_used(tc_used_gas));
                 }
             }
         }
@@ -154,9 +155,11 @@ impl Querier for GoQuerier {
         let mut res_store: *mut Db = std::ptr::null_mut();
         let mut res_querier: *mut GoQuerier = std::ptr::null_mut();
         let mut error_msg = UnmanagedVector::default();
+        let mut gci_used_gas = 0_u64;
 
         let go_result: GoError = (self.vtable.get_call_info)(
             self.state,
+            &mut gci_used_gas as *mut u64,
             U8SliceView::new(Some(contract_address.as_bytes())),
             U8SliceView::new(Some(contract_address.as_bytes())),
             &mut res_code_hash as *mut UnmanagedVector,
@@ -164,6 +167,8 @@ impl Querier for GoQuerier {
             &mut res_querier,
             &mut error_msg as *mut UnmanagedVector,
         ).into();
+
+        let mut ret_gas_uesd = GasInfo::with_externally_used(gci_used_gas+tc_used_gas);
 
         let default = || {
             format!(
@@ -173,12 +178,12 @@ impl Querier for GoQuerier {
         };
         unsafe {
             if let Err(err) = go_result.into_result(error_msg, default) {
-                return (Err(VmError::BackendErr { source: err }), GasInfo::with_cost(0));
+                return (Err(VmError::BackendErr { source: err }), ret_gas_uesd);
             }
         }
 
         if res_store.is_null() || res_querier.is_null() || res_code_hash.is_none(){
-            return (Err(VmError::BackendErr {source: BackendError::unknown("res_store, res_querier or res_code_hash is null")}), GasInfo::with_cost(0));
+            return (Err(VmError::BackendErr {source: BackendError::unknown("res_store, res_querier or res_code_hash is null")}), ret_gas_uesd);
         }
 
         // We destruct the UnmanagedVector here, no matter if we need the data.
@@ -209,19 +214,22 @@ impl Querier for GoQuerier {
         };
         unsafe {
             if let Err(err) = go_result.into_result(error_msg, default) {
-                return (Err(VmError::BackendErr { source: err }), GasInfo::with_cost(0));
+                return (Err(VmError::BackendErr { source: err }), ret_gas_uesd);
             }
         }
         if res_api.is_null() || res_cache.is_null() {
-            return (Err(VmError::BackendErr { source: BackendError::unknown("res_api or res_cache is null") }), GasInfo::with_cost(0));
+            return (Err(VmError::BackendErr { source: BackendError::unknown("res_api or res_cache is null") }), ret_gas_uesd);
         }
 
         let api = unsafe{(*res_api).clone()};
         let (result, gas_info) = do_call(env1, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit, Addr::unchecked(contract_address.clone()));
 
+        ret_gas_uesd += gas_info;
         (self.vtable.release)(unsafe{(*res_store).state});
 
-        (result, gas_info)
+        println!("the call all gas is {:?}, do_call gas is {:?}, gci_used_gas {}, tc_used_gas {}", ret_gas_uesd.clone(), gas_info.clone(), gci_used_gas, tc_used_gas);
+
+        (result, ret_gas_uesd)
     }
 
     fn delegate_call<A: BackendApi, S: Storage, Q: Querier>(&self, env: &Environment<A, S, Q>,
@@ -238,9 +246,11 @@ impl Querier for GoQuerier {
         let mut res_store: *mut Db = std::ptr::null_mut();
         let mut res_querier: *mut GoQuerier = std::ptr::null_mut();
         let mut error_msg = UnmanagedVector::default();
+        let mut gci_used_gas = 0_u64;
 
         let go_result: GoError = (self.vtable.get_call_info)(
             self.state,
+            &mut gci_used_gas as *mut u64,
             U8SliceView::new(Some(contract_address.as_bytes())),
             U8SliceView::new(Some(env.delegate_contract_addr.clone().as_bytes())),
             &mut res_code_hash as *mut UnmanagedVector,
@@ -248,6 +258,8 @@ impl Querier for GoQuerier {
             &mut res_querier,
             &mut error_msg as *mut UnmanagedVector,
         ).into();
+
+        let mut ret_gas_uesd = GasInfo::with_externally_used(gci_used_gas);
 
         let default = || {
             format!(
@@ -258,12 +270,12 @@ impl Querier for GoQuerier {
         };
         unsafe {
             if let Err(err) = go_result.into_result(error_msg, default) {
-                return (Err(VmError::BackendErr { source: err }), GasInfo::with_cost(0));
+                return (Err(VmError::BackendErr { source: err }), ret_gas_uesd);
             }
         }
 
         if res_store.is_null() || res_querier.is_null() || res_code_hash.is_none(){
-            return (Err(VmError::BackendErr {source: BackendError::unknown("res_store, res_querier or res_code_hash is null")}), GasInfo::with_cost(0));
+            return (Err(VmError::BackendErr {source: BackendError::unknown("res_store, res_querier or res_code_hash is null")}), ret_gas_uesd);
         }
 
         let res_code_hash = res_code_hash.consume();
@@ -292,19 +304,21 @@ impl Querier for GoQuerier {
         };
         unsafe {
             if let Err(err) = go_result.into_result(error_msg, default) {
-                return (Err(VmError::BackendErr { source: err }), GasInfo::with_cost(0));
+                return (Err(VmError::BackendErr { source: err }), ret_gas_uesd);
             }
         }
         if res_api.is_null() || res_cache.is_null() {
-            return (Err(VmError::BackendErr { source: BackendError::unknown("res_api or res_cache is null") }), GasInfo::with_cost(0));
+            return (Err(VmError::BackendErr { source: BackendError::unknown("res_api or res_cache is null") }), ret_gas_uesd);
         }
 
         let api = unsafe{(*res_api).clone()};
         let (result, gas_info) = do_call(env, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit, env.delegate_contract_addr.clone());
 
+        ret_gas_uesd += gas_info;
         (self.vtable.release)(unsafe{(*res_store).state});
 
-        (result, gas_info)
+        println!("the call all gas is {:?}, do_call gas is {:?}, gci_used_gas {}", ret_gas_uesd.clone(), gas_info.clone(), gci_used_gas);
+        (result, ret_gas_uesd)
     }
 }
 
@@ -344,11 +358,9 @@ pub fn do_call<A: BackendApi, S: Storage, Q: Querier>(
             let benv = to_vec(benv).unwrap();
             let info = to_vec(info).unwrap();
             let result = call_execute_raw(&mut ins, &benv, &info, call_msg);
-            let gas_used = gas_limit - ins.get_gas_left();
-            let gas_externally_used = ins.get_externally_used_gas();
-            let gas_cost       = gas_used - gas_externally_used;
-            println!("rust wasmvm the call_execute gas_limit {} gas_used {}, gas_externally_used {}", gas_limit, gas_used, gas_externally_used);
-            (result, GasInfo::new(gas_cost, gas_externally_used))
+            let gas_rep = ins.create_gas_report();
+            println!("rust wasmvm the call_execute {:?}", gas_rep.clone());
+            (result, GasInfo::new(gas_rep.used_internally, gas_rep.used_externally))
         }
         Err(err) => {
             (Err(err), GasInfo::with_cost(0))

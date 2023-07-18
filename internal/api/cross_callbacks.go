@@ -26,14 +26,18 @@ func RegisterTransferCoins(fnn func(q unsafe.Pointer, contractAddress, caller st
 	TransferCoinsFunc = fnn
 }
 
-func GetCallInfo(p unsafe.Pointer, contrAddr C.U8SliceView, storeAddr C.U8SliceView, resCodeHash *C.UnmanagedVector, resStore **C.Db, resQuerier **C.GoQuerier, errOut *C.UnmanagedVector) (ret C.GoError) {
+func GetCallInfo(p unsafe.Pointer, usedGas *cu64, contrAddr C.U8SliceView, storeAddr C.U8SliceView, resCodeHash *C.UnmanagedVector, resStore **C.Db, resQuerier **C.GoQuerier, errOut *C.UnmanagedVector) (ret C.GoError) {
 	if GetCallInfoFunc == nil {
 		*errOut = newUnmanagedVector([]byte("the GetCallInfoFunc is nil"))
 		return C.GoError_Other
 	}
 	cAddr := copyU8Slice(contrAddr)
 	sAddr := copyU8Slice(storeAddr)
+	querier := *(*Querier)(p)
+	gasBefore := querier.GasConsumed()
 	codeHash, store, querier, gasMeter, err := GetCallInfoFunc(p, string(cAddr), string(sAddr))
+	gasAfter := querier.GasConsumed()
+	*usedGas = (cu64)(gasAfter - gasBefore)
 	if err != nil {
 		*errOut = newUnmanagedVector([]byte(err.Error()))
 		return C.GoError_Other
