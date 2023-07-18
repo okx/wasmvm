@@ -20,6 +20,7 @@ typedef GoError (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_
 typedef GoError (*get_call_info_fn)(querier_t *ptr, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, UnmanagedVector *errOut);
 typedef GoError (*get_wasm_info_fn)(GoApi **resGoApi, cache_t **resCache_t, UnmanagedVector *errOut);
 typedef GoError (*release_fn)(db_t *ptr);
+typedef GoError (*transfer_coins_fn)(querier_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView caller, U8SliceView coins, UnmanagedVector *errOut);
 
 // forward declarations (db)
 GoError cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *val, UnmanagedVector *errOut);
@@ -36,6 +37,7 @@ GoError cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_ga
 GoError cGetCallInfo_cgo(querier_t *ptr, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, UnmanagedVector *errOut);
 GoError cGetWasmInfo_cgo(GoApi **resGoApi, cache_t **resCache_t, UnmanagedVector *errOut);
 GoError cRelease_cgo(db_t *ptr);
+GoError cTransferCoins_cgo(querier_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView caller, U8SliceView coins, UnmanagedVector *errOut);
 */
 import "C"
 
@@ -390,6 +392,7 @@ var querier_vtable = C.Querier_vtable{
 	get_call_info:  (C.get_call_info_fn)(C.cGetCallInfo_cgo),
 	get_wasm_info:  (C.get_wasm_info_fn)(C.cGetWasmInfo_cgo),
 	release:        (C.release_fn)(C.cRelease_cgo),
+	transfer_coins: (C.transfer_coins_fn)(C.cTransferCoins_cgo),
 }
 
 // contract: original pointer/struct referenced must live longer than C.GoQuerier struct
@@ -448,4 +451,10 @@ func cGetWasmInfo(resGoApi **C.GoApi, resCache_t **C.cache_t, errOut *C.Unmanage
 func cRelease(ptr *C.db_t) (ret C.GoError) {
 	defer recoverPanic(&ret)
 	return Release(ptr)
+}
+
+//export cTransferCoins
+func cTransferCoins(ptr *C.querier_t, usedGas *cu64, contractAddress C.U8SliceView, caller C.U8SliceView, coins C.U8SliceView, errOut *C.UnmanagedVector) (ret C.GoError) {
+	defer recoverPanic(&ret)
+	return TransferCoins(unsafe.Pointer(ptr), usedGas, contractAddress, caller, coins, errOut)
 }

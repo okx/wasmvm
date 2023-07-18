@@ -12,12 +12,18 @@ var GetCallInfoFunc func(q unsafe.Pointer, contractAddress, storeAddress string)
 
 var GetWasmCacheInfoFunc func() (types.GoAPI, Cache)
 
+var TransferCoinsFunc func(q unsafe.Pointer, contractAddress, caller string, coins []byte) error
+
 func RegisterGetWasmCallInfo(fnn func(q unsafe.Pointer, contractAddress, storeAddress string) ([]byte, types.KVStore, types.Querier, types.GasMeter, error)) {
 	GetCallInfoFunc = fnn
 }
 
 func RegisterGetWasmCacheInfo(fnn func() (types.GoAPI, Cache)) {
 	GetWasmCacheInfoFunc = fnn
+}
+
+func RegisterTransferCoins(fnn func(q unsafe.Pointer, contractAddress, caller string, coins []byte) error) {
+	TransferCoinsFunc = fnn
 }
 
 func GetCallInfo(p unsafe.Pointer, contrAddr C.U8SliceView, storeAddr C.U8SliceView, resCodeHash *C.UnmanagedVector, resStore **C.Db, resQuerier **C.GoQuerier, errOut *C.UnmanagedVector) (ret C.GoError) {
@@ -59,5 +65,25 @@ func Release(ptr *C.db_t) (ret C.GoError) {
 	}
 	state := (*DBState)(unsafe.Pointer(ptr))
 	endCall(state.CallID)
+	return C.GoError_None
+}
+
+func TransferCoins(p unsafe.Pointer, usedGas *cu64, contrAddr C.U8SliceView, caller C.U8SliceView, coins C.U8SliceView, errOut *C.UnmanagedVector) (ret C.GoError) {
+	if TransferCoinsFunc == nil {
+		*errOut = newUnmanagedVector([]byte("the TransferCoinsFunc is nil"))
+		return C.GoError_Other
+	}
+	cAddr := copyU8Slice(contrAddr)
+	ccaller := copyU8Slice(caller)
+	ccoins := copyU8Slice(coins)
+	querier := *(*Querier)(p)
+	gasBefore := querier.GasConsumed()
+	err := TransferCoinsFunc(p, string(cAddr), string(ccaller), ccoins)
+	gasAfter := querier.GasConsumed()
+	*usedGas = (cu64)(gasAfter - gasBefore)
+	if err != nil {
+		*errOut = newUnmanagedVector([]byte(err.Error()))
+		return C.GoError_Other
+	}
 	return C.GoError_None
 }

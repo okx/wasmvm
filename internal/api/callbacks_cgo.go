@@ -19,6 +19,7 @@ GoError cQueryExternal(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U
 GoError cGetCallInfo(querier_t *ptr, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, UnmanagedVector *errOut);
 GoError cGetWasmInfo(GoApi **resGoApi, cache_t **resCache_t, UnmanagedVector *errOut);
 GoError cRelease(db_t *ptr);
+GoError cTransferCoins(querier_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView caller, U8SliceView coins, UnmanagedVector *errOut);
 
 // Gateway functions (db)
 GoError cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *val, UnmanagedVector *errOut) {
@@ -62,6 +63,10 @@ GoError cGetWasmInfo_cgo(GoApi **resGoApi, cache_t **resCache_t, UnmanagedVector
 
 GoError cRelease_cgo(db_t *ptr) {
    return cRelease(ptr);
+}
+
+GoError cTransferCoins_cgo(querier_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView caller, U8SliceView coins, UnmanagedVector *errOut) {
+   return cTransferCoins(ptr, used_gas, contractAddress, caller, coins, errOut);
 }
 
 */

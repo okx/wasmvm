@@ -44,3 +44,7 @@ func RegisterGetWasmCallInfo(fnn func(q unsafe.Pointer, contractAddress, storeAd
 func RegisterGetWasmCacheInfo(fnn func() (types.GoAPI, Cache)) {
 	api.RegisterGetWasmCacheInfo(fnn)
 }
+
+func RegisterTransferCoins(fnn func(q unsafe.Pointer, contractAddress, caller string, coins []byte) error) {
+	api.RegisterTransferCoins(fnn)
+}

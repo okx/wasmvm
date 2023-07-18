@@ -299,6 +299,7 @@ typedef struct Querier_vtable {
   int32_t (*get_call_info)(const struct querier_t*, struct U8SliceView, struct U8SliceView, struct UnmanagedVector*, struct Db**, struct GoQuerier**, struct UnmanagedVector*);
   int32_t (*get_wasm_info)(struct GoApi**, struct cache_t**, struct UnmanagedVector*);
   int32_t (*release)(struct db_t*);
+  int32_t (*transfer_coins)(const struct querier_t*, uint64_t*, struct U8SliceView, struct U8SliceView, struct U8SliceView, struct UnmanagedVector*);
 } Querier_vtable;
 
 typedef struct GoQuerier {

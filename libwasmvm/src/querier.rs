@@ -45,9 +45,17 @@ pub struct Querier_vtable {
         *mut *mut cache_t,
         *mut UnmanagedVector, // error message output
     ) -> i32,
-    pub release: extern "C" fn(
+    pub release: extern "C" fn (
         *mut db_t,
-    )-> i32,
+    ) -> i32,
+    pub transfer_coins: extern "C" fn (
+        *const querier_t,
+        *mut u64,       // used gas
+        U8SliceView,    // contract address
+        U8SliceView,    // caller
+        U8SliceView,    // coins
+        *mut UnmanagedVector, // error message output
+    ) -> i32,
 }
 
 #[repr(C)]
@@ -113,6 +121,35 @@ impl Querier for GoQuerier {
                           block_env: &Env,
                           gas_limit: u64
     ) -> (VmResult<Vec<u8>>, GasInfo) {
+        println!("rust wasmvm call contract_address: {:?} , sender address {:?}", contract_address, info.sender.clone());
+
+        let mut used_gas = 0_u64;
+        // need check transfer
+        if info.funds.len() != 0 {
+            let mut error_msg = UnmanagedVector::default();
+            let coins = to_vec(&info.funds).unwrap();
+            println!("data is {:?}", String::from_utf8(coins.clone()).unwrap());
+            let go_result: GoError = (self.vtable.transfer_coins)(
+                self.state,
+                &mut used_gas as *mut u64,
+                U8SliceView::new(Some(contract_address.as_bytes())),
+                U8SliceView::new(Some(info.sender.clone().as_bytes())),
+                U8SliceView::new(Some(coins.as_slice())),
+                &mut error_msg as *mut UnmanagedVector,
+            ).into();
+            let default = || {
+                format!(
+                    "Call failed to transferCoins contract address: {}",
+                    contract_address
+                )
+            };
+            unsafe {
+                if let Err(err) = go_result.into_result(error_msg, default) {
+                    return (Err(VmError::BackendErr { source: err }), GasInfo::with_externally_used(used_gas));
+                }
+            }
+        }
+
         let mut res_code_hash = UnmanagedVector::default();
         let mut res_store: *mut Db = std::ptr::null_mut();
         let mut res_querier: *mut GoQuerier = std::ptr::null_mut();
@@ -194,6 +231,9 @@ impl Querier for GoQuerier {
                                                                       block_env: &Env,
                                                                       gas_limit: u64
     ) -> (VmResult<Vec<u8>>, GasInfo) {
+        println!("rust wasmvm delegate_call contract_address: {:?}, caller address {:?}, sender address {:?}",
+                 contract_address, env.delegate_contract_addr.clone(), info.sender.clone());
+
         let mut res_code_hash = UnmanagedVector::default();
         let mut res_store: *mut Db = std::ptr::null_mut();
         let mut res_querier: *mut GoQuerier = std::ptr::null_mut();
@@ -307,6 +347,7 @@ pub fn do_call<A: BackendApi, S: Storage, Q: Querier>(
             let gas_used = gas_limit - ins.get_gas_left();
             let gas_externally_used = ins.get_externally_used_gas();
             let gas_cost       = gas_used - gas_externally_used;
+            println!("rust wasmvm the call_execute gas_limit {} gas_used {}, gas_externally_used {}", gas_limit, gas_used, gas_externally_used);
             (result, GasInfo::new(gas_cost, gas_externally_used))
         }
         Err(err) => {
