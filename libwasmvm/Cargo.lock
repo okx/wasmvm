@@ -217,27 +217,25 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "1.2.5"
+version = "1.2.4"
 dependencies = [
  "digest 0.10.3",
  "ed25519-zebra",
- "hex",
  "k256",
  "rand_core 0.6.3",
- "sha3",
  "thiserror",
 ]
 
 [[package]]
 name = "cosmwasm-derive"
-version = "1.2.5"
+version = "1.2.4"
 dependencies = [
  "syn",
 ]
 
 [[package]]
 name = "cosmwasm-std"
-version = "1.2.5"
+version = "1.2.4"
 dependencies = [
  "base64",
  "cosmwasm-crypto",
@@ -255,15 +253,14 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "1.2.5"
+version = "1.2.4"
 dependencies = [
+ "backtrace",
  "bitflags",
  "bytecheck",
  "clru",
  "cosmwasm-crypto",
  "cosmwasm-std",
- "crc32fast",
- "derivative",
  "enumset",
  "hex",
  "loupe",
@@ -865,15 +862,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "keccak"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f6d5ed8676d904364de097082f4e7d240b571b67989ced0240f08b7f966f940"
-dependencies = [
- "cpufeatures",
-]
-
-[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1037,9 +1025,9 @@ checksum = "9ff7415e9ae3fff1225851df9e0d9e4e5479f947619774677a63572e55e80eff"
 
 [[package]]
 name = "parity-wasm"
-version = "0.45.0"
+version = "0.42.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1ad0aff30c1da14b1254fcb2af73e1fa9a28670e584a626f53a369d0e157304"
+checksum = "be5e13c266502aadf83426d87d81a0f5d1ef45b8027f5a471c360abfe4bfae92"
 
 [[package]]
 name = "pin-project-lite"
@@ -1409,16 +1397,6 @@ dependencies = [
  "cfg-if",
  "cpufeatures",
  "digest 0.10.3",
-]
-
-[[package]]
-name = "sha3"
-version = "0.10.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eaedf34ed289ea47c2b741bb72e5357a209512d67bcd4bda44359e5bf0470f56"
-dependencies = [
- "digest 0.10.3",
- "keccak",
 ]
 
 [[package]]
