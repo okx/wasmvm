@@ -84,7 +84,7 @@ func (vm *VM) Create(code WasmCode, version int) (Checksum, error) {
 	if version == 1 {
 		return v1.Create(vm.cache, code)
 	} else {
-		return v2.Create(vm.cacheV2, code)
+		return v2.StoreCode(vm.cacheV2, code)
 	}
 }
 

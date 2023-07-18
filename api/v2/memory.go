@@ -41,6 +41,12 @@ func constructUnmanagedVector(is_none Cbool, ptr Cu8_ptr, len Cusize, cap Cusize
 	}
 }
 
+// uninitializedUnmanagedVector returns an invalid C.UnmanagedVector
+// instance. Only use then after someone wrote an instance to it.
+func uninitializedUnmanagedVector() C.UnmanagedVector {
+	return C.UnmanagedVector{}
+}
+
 func NewUnmanagedVector(data []byte) C.UnmanagedVector {
 	if data == nil {
 		return C.new_unmanaged_vector(Cbool(true), Cu8_ptr(nil), Cusize(0))

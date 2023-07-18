@@ -15,18 +15,18 @@ import "C"
 
 type Querier = types.Querier
 
-func InitCache(dataDir string, supportedFeatures string, cacheSize uint32, instanceMemoryLimit uint32) (Cache, error) {
+func InitCache(dataDir string, supportedCapabilities string, cacheSize uint32, instanceMemoryLimit uint32) (Cache, error) {
 	dataDirBytes := []byte(dataDir)
-	supportedFeaturesBytes := []byte(supportedFeatures)
+	supportedCapabilitiesBytes := []byte(supportedCapabilities)
 
 	d := MakeView(dataDirBytes)
 	defer runtime.KeepAlive(dataDirBytes)
-	f := MakeView(supportedFeaturesBytes)
-	defer runtime.KeepAlive(supportedFeaturesBytes)
+	capabilitiesView := MakeView(supportedCapabilitiesBytes)
+	defer runtime.KeepAlive(supportedCapabilitiesBytes)
 
-	errmsg := NewUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
-	ptr, err := C.init_cache(d, f, Cu32(cacheSize), Cu32(instanceMemoryLimit), &errmsg)
+	ptr, err := C.init_cache(d, capabilitiesView, Cu32(cacheSize), Cu32(instanceMemoryLimit), &errmsg)
 	if err != nil {
 		return Cache{}, errorWithMessage(err, errmsg)
 	}
@@ -37,10 +37,10 @@ func ReleaseCache(cache Cache) {
 	C.release_cache(cache.Ptr)
 }
 
-func Create(cache Cache, wasm []byte) ([]byte, error) {
+func StoreCode(cache Cache, wasm []byte) ([]byte, error) {
 	w := MakeView(wasm)
 	defer runtime.KeepAlive(wasm)
-	errmsg := NewUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 	checksum, err := C.save_wasm(cache.Ptr, w, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
@@ -48,10 +48,20 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 	return CopyAndDestroyUnmanagedVector(checksum), nil
 }
 
+func RemoveCode(cache Cache, checksum []byte) error {
+	//cs := MakeView(checksum)
+	//defer runtime.KeepAlive(checksum)
+	//errmsg := uninitializedUnmanagedVector()
+	//_, err := C.remove_wasm(cache.Ptr, cs, &errmsg)
+	//if err != nil {
+	//	return errorWithMessage(err, errmsg)
+	//}
+	return nil
+}
 func GetCode(cache Cache, checksum []byte) ([]byte, error) {
 	cs := MakeView(checksum)
 	defer runtime.KeepAlive(checksum)
-	errmsg := NewUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 	wasm, err := C.load_wasm(cache.Ptr, cs, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
@@ -62,7 +72,7 @@ func GetCode(cache Cache, checksum []byte) ([]byte, error) {
 func Pin(cache Cache, checksum []byte) error {
 	cs := MakeView(checksum)
 	defer runtime.KeepAlive(checksum)
-	errmsg := NewUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 	_, err := C.pin(cache.Ptr, cs, &errmsg)
 	if err != nil {
 		return errorWithMessage(err, errmsg)
@@ -73,7 +83,7 @@ func Pin(cache Cache, checksum []byte) error {
 func Unpin(cache Cache, checksum []byte) error {
 	cs := MakeView(checksum)
 	defer runtime.KeepAlive(checksum)
-	errmsg := NewUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 	_, err := C.unpin(cache.Ptr, cs, &errmsg)
 	if err != nil {
 		return errorWithMessage(err, errmsg)
@@ -84,20 +94,22 @@ func Unpin(cache Cache, checksum []byte) error {
 func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 	cs := MakeView(checksum)
 	defer runtime.KeepAlive(checksum)
-	errmsg := NewUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 	report, err := C.analyze_code(cache.Ptr, cs, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
+	requiredCapabilities := string(CopyAndDestroyUnmanagedVector(report.required_capabilities))
 	res := types.AnalysisReport{
-		HasIBCEntryPoints: bool(report.has_ibc_entry_points),
-		RequiredFeatures:  string(CopyAndDestroyUnmanagedVector(report.required_features)),
+		HasIBCEntryPoints:    bool(report.has_ibc_entry_points),
+		RequiredFeatures:     requiredCapabilities,
+		RequiredCapabilities: requiredCapabilities,
 	}
 	return &res, nil
 }
 
 func GetMetrics(cache Cache) (*types.Metrics, error) {
-	errmsg := NewUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 	metrics, err := C.get_metrics(cache.Ptr, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
@@ -145,7 +157,7 @@ func Instantiate(
 	a := BuildAPI(api)
 	q := BuildQuerier(querier)
 	var gasUsed Cu64
-	errmsg := NewUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.instantiate(cache.Ptr, cs, e, i, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -187,7 +199,7 @@ func Execute(
 	a := BuildAPI(api)
 	q := BuildQuerier(querier)
 	var gasUsed Cu64
-	errmsg := NewUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.execute(cache.Ptr, cs, e, i, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -224,7 +236,7 @@ func Migrate(
 	a := BuildAPI(api)
 	q := BuildQuerier(querier)
 	var gasUsed Cu64
-	errmsg := NewUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.migrate(cache.Ptr, cs, e, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -261,7 +273,7 @@ func Sudo(
 	a := BuildAPI(api)
 	q := BuildQuerier(querier)
 	var gasUsed Cu64
-	errmsg := NewUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.sudo(cache.Ptr, cs, e, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -298,7 +310,7 @@ func Reply(
 	a := BuildAPI(api)
 	q := BuildQuerier(querier)
 	var gasUsed Cu64
-	errmsg := NewUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.reply(cache.Ptr, cs, e, r, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -335,7 +347,7 @@ func Query(
 	a := BuildAPI(api)
 	q := BuildQuerier(querier)
 	var gasUsed Cu64
-	errmsg := NewUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.query(cache.Ptr, cs, e, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -372,7 +384,7 @@ func IBCChannelOpen(
 	a := BuildAPI(api)
 	q := BuildQuerier(querier)
 	var gasUsed Cu64
-	errmsg := NewUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.ibc_channel_open(cache.Ptr, cs, e, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -409,7 +421,7 @@ func IBCChannelConnect(
 	a := BuildAPI(api)
 	q := BuildQuerier(querier)
 	var gasUsed Cu64
-	errmsg := NewUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.ibc_channel_connect(cache.Ptr, cs, e, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -446,7 +458,7 @@ func IBCChannelClose(
 	a := BuildAPI(api)
 	q := BuildQuerier(querier)
 	var gasUsed Cu64
-	errmsg := NewUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.ibc_channel_close(cache.Ptr, cs, e, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -483,7 +495,7 @@ func IBCPacketReceive(
 	a := BuildAPI(api)
 	q := BuildQuerier(querier)
 	var gasUsed Cu64
-	errmsg := NewUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.ibc_packet_receive(cache.Ptr, cs, e, pa, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -520,7 +532,7 @@ func IBCPacketAck(
 	a := BuildAPI(api)
 	q := BuildQuerier(querier)
 	var gasUsed Cu64
-	errmsg := NewUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.ibc_packet_ack(cache.Ptr, cs, e, ac, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -557,7 +569,7 @@ func IBCPacketTimeout(
 	a := BuildAPI(api)
 	q := BuildQuerier(querier)
 	var gasUsed Cu64
-	errmsg := NewUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.ibc_packet_timeout(cache.Ptr, cs, e, pa, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
