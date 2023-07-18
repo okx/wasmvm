@@ -26,7 +26,7 @@ func InitCache(dataDir string, supportedCapabilities string, cacheSize uint32, i
 
 	errmsg := uninitializedUnmanagedVector()
 
-	ptr, err := C.init_cache(d, capabilitiesView, Cu32(cacheSize), Cu32(instanceMemoryLimit), &errmsg)
+	ptr, err := C.init_cache2(d, capabilitiesView, Cu32(cacheSize), Cu32(instanceMemoryLimit), &errmsg)
 	if err != nil {
 		return Cache{}, errorWithMessage(err, errmsg)
 	}
@@ -34,14 +34,14 @@ func InitCache(dataDir string, supportedCapabilities string, cacheSize uint32, i
 }
 
 func ReleaseCache(cache Cache) {
-	C.release_cache(cache.Ptr)
+	C.release_cache2(cache.Ptr)
 }
 
 func StoreCode(cache Cache, wasm []byte) ([]byte, error) {
 	w := MakeView(wasm)
 	defer runtime.KeepAlive(wasm)
 	errmsg := uninitializedUnmanagedVector()
-	checksum, err := C.save_wasm(cache.Ptr, w, &errmsg)
+	checksum, err := C.save_wasm2(cache.Ptr, w, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -52,7 +52,7 @@ func RemoveCode(cache Cache, checksum []byte) error {
 	//cs := MakeView(checksum)
 	//defer runtime.KeepAlive(checksum)
 	//errmsg := uninitializedUnmanagedVector()
-	//_, err := C.remove_wasm(cache.Ptr, cs, &errmsg)
+	//_, err := C.remove_wasm2(cache.Ptr, cs, &errmsg)
 	//if err != nil {
 	//	return errorWithMessage(err, errmsg)
 	//}
@@ -62,7 +62,7 @@ func GetCode(cache Cache, checksum []byte) ([]byte, error) {
 	cs := MakeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := uninitializedUnmanagedVector()
-	wasm, err := C.load_wasm(cache.Ptr, cs, &errmsg)
+	wasm, err := C.load_wasm2(cache.Ptr, cs, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -73,7 +73,7 @@ func Pin(cache Cache, checksum []byte) error {
 	cs := MakeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := uninitializedUnmanagedVector()
-	_, err := C.pin(cache.Ptr, cs, &errmsg)
+	_, err := C.pin2(cache.Ptr, cs, &errmsg)
 	if err != nil {
 		return errorWithMessage(err, errmsg)
 	}
@@ -84,7 +84,7 @@ func Unpin(cache Cache, checksum []byte) error {
 	cs := MakeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := uninitializedUnmanagedVector()
-	_, err := C.unpin(cache.Ptr, cs, &errmsg)
+	_, err := C.unpin2(cache.Ptr, cs, &errmsg)
 	if err != nil {
 		return errorWithMessage(err, errmsg)
 	}
@@ -95,7 +95,7 @@ func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 	cs := MakeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := uninitializedUnmanagedVector()
-	report, err := C.analyze_code(cache.Ptr, cs, &errmsg)
+	report, err := C.analyze_code2(cache.Ptr, cs, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -110,7 +110,7 @@ func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 
 func GetMetrics(cache Cache) (*types.Metrics, error) {
 	errmsg := uninitializedUnmanagedVector()
-	metrics, err := C.get_metrics(cache.Ptr, &errmsg)
+	metrics, err := C.get_metrics2(cache.Ptr, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -159,7 +159,7 @@ func Instantiate(
 	var gasUsed Cu64
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.instantiate(cache.Ptr, cs, e, i, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.instantiate2(cache.Ptr, cs, e, i, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -201,7 +201,7 @@ func Execute(
 	var gasUsed Cu64
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.execute(cache.Ptr, cs, e, i, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.execute2(cache.Ptr, cs, e, i, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -238,7 +238,7 @@ func Migrate(
 	var gasUsed Cu64
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.migrate(cache.Ptr, cs, e, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.migrate2(cache.Ptr, cs, e, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -275,7 +275,7 @@ func Sudo(
 	var gasUsed Cu64
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.sudo(cache.Ptr, cs, e, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.sudo2(cache.Ptr, cs, e, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -312,7 +312,7 @@ func Reply(
 	var gasUsed Cu64
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.reply(cache.Ptr, cs, e, r, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.reply2(cache.Ptr, cs, e, r, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -349,7 +349,7 @@ func Query(
 	var gasUsed Cu64
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.query(cache.Ptr, cs, e, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.query2(cache.Ptr, cs, e, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -386,7 +386,7 @@ func IBCChannelOpen(
 	var gasUsed Cu64
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_channel_open(cache.Ptr, cs, e, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_channel_open2(cache.Ptr, cs, e, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -423,7 +423,7 @@ func IBCChannelConnect(
 	var gasUsed Cu64
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_channel_connect(cache.Ptr, cs, e, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_channel_connect2(cache.Ptr, cs, e, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -460,7 +460,7 @@ func IBCChannelClose(
 	var gasUsed Cu64
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_channel_close(cache.Ptr, cs, e, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_channel_close2(cache.Ptr, cs, e, m, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -497,7 +497,7 @@ func IBCPacketReceive(
 	var gasUsed Cu64
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_packet_receive(cache.Ptr, cs, e, pa, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_packet_receive2(cache.Ptr, cs, e, pa, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -534,7 +534,7 @@ func IBCPacketAck(
 	var gasUsed Cu64
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_packet_ack(cache.Ptr, cs, e, ac, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_packet_ack2(cache.Ptr, cs, e, ac, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -571,7 +571,7 @@ func IBCPacketTimeout(
 	var gasUsed Cu64
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_packet_timeout(cache.Ptr, cs, e, pa, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_packet_timeout2(cache.Ptr, cs, e, pa, db, a, q, Cu64(gasLimit), Cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)

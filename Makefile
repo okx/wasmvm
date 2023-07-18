@@ -1,6 +1,6 @@
 .PHONY: all build build-rust build-go test
 
-# Builds the Rust library libwasmvm
+# Builds the Rust library libwasmvm_v1
 BUILDERS_PREFIX := cosmwasm/go-ext-builder:0012
 # Contains a full Go dev environment in order to run Go tests on the built library
 ALPINE_TESTER := cosmwasm/go-ext-builder:0012-alpine
@@ -47,10 +47,10 @@ build-rust-debug:
 # See https://github.com/CosmWasm/wasmvm/issues/222#issuecomment-880616953 for two approaches to
 # enable stripping through cargo (if that is desired).
 build-rust-release:
-	(cd libwasmvm && cargo build --release)
-	cp libwasmvm/target/release/$(SHARED_LIB_SRC) api/v1/$(SHARED_LIB_DST)
-	(cd libwasmvm_v2 && cargo build)
-	cp libwasmvm_v2/target/release/libwasmvm.dylib api/v2/libwasmvm_v2.dylib
+	(cd libwasmvm_v1 && cargo build --release)
+	cp libwasmvm_v1/target/release/libwasmvm1.dylib api/v1/libwasmvm1.dylib
+	(cd libwasmvm_v2 && cargo build --release)
+	cp libwasmvm_v2/target/release/libwasmvm2.dylib api/v2/libwasmvm2.dylib
 	make update-bindings
 	@ #this pulls out ELF symbols, 80% size reduction!
 
@@ -95,9 +95,9 @@ release-build-macos:
 	make update-bindings
 
 update-bindings:
-	# After we build libwasmvm, we have to copy the generated bindings for Go code to use.
+	# After we build libwasmvm_v1, we have to copy the generated bindings for Go code to use.
 	# We cannot use symlinks as those are not reliably resolved by `go get` (https://github.com/CosmWasm/wasmvm/pull/235).
-	cp libwasmvm/bindings.h api/v1
+	cp libwasmvm_v1/bindings.h api/v1
 	cp libwasmvm_v2/bindings.h api/v2
 
 release-build:

@@ -303,33 +303,35 @@ typedef struct GoQuerier {
   struct Querier_vtable vtable;
 } GoQuerier;
 
-struct cache_t *init_cache(struct ByteSliceView data_dir,
-                           struct ByteSliceView available_capabilities,
-                           uint32_t cache_size,
-                           uint32_t instance_memory_limit,
-                           struct UnmanagedVector *error_msg);
+struct cache_t *init_cache2(struct ByteSliceView data_dir,
+                            struct ByteSliceView available_capabilities,
+                            uint32_t cache_size,
+                            uint32_t instance_memory_limit,
+                            struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector save_wasm(struct cache_t *cache,
-                                 struct ByteSliceView wasm,
-                                 struct UnmanagedVector *error_msg);
+struct UnmanagedVector save_wasm2(struct cache_t *cache,
+                                  struct ByteSliceView wasm,
+                                  struct UnmanagedVector *error_msg);
 
-void remove_wasm(struct cache_t *cache,
-                 struct ByteSliceView checksum,
-                 struct UnmanagedVector *error_msg);
+void remove_wasm2(struct cache_t *cache,
+                  struct ByteSliceView checksum,
+                  struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector load_wasm(struct cache_t *cache,
-                                 struct ByteSliceView checksum,
-                                 struct UnmanagedVector *error_msg);
+struct UnmanagedVector load_wasm2(struct cache_t *cache,
+                                  struct ByteSliceView checksum,
+                                  struct UnmanagedVector *error_msg);
 
-void pin(struct cache_t *cache, struct ByteSliceView checksum, struct UnmanagedVector *error_msg);
+void pin2(struct cache_t *cache, struct ByteSliceView checksum, struct UnmanagedVector *error_msg);
 
-void unpin(struct cache_t *cache, struct ByteSliceView checksum, struct UnmanagedVector *error_msg);
+void unpin2(struct cache_t *cache,
+            struct ByteSliceView checksum,
+            struct UnmanagedVector *error_msg);
 
-struct AnalysisReport analyze_code(struct cache_t *cache,
-                                   struct ByteSliceView checksum,
-                                   struct UnmanagedVector *error_msg);
+struct AnalysisReport analyze_code2(struct cache_t *cache,
+                                    struct ByteSliceView checksum,
+                                    struct UnmanagedVector *error_msg);
 
-struct Metrics get_metrics(struct cache_t *cache, struct UnmanagedVector *error_msg);
+struct Metrics get_metrics2(struct cache_t *cache, struct UnmanagedVector *error_msg);
 
 /**
  * frees a cache reference
@@ -339,59 +341,47 @@ struct Metrics get_metrics(struct cache_t *cache, struct UnmanagedVector *error_
  * This must be called exactly once for any `*cache_t` returned by `init_cache`
  * and cannot be called on any other pointer.
  */
-void release_cache(struct cache_t *cache);
+void release_cache2(struct cache_t *cache);
 
-struct UnmanagedVector instantiate(struct cache_t *cache,
-                                   struct ByteSliceView checksum,
-                                   struct ByteSliceView env,
-                                   struct ByteSliceView info,
-                                   struct ByteSliceView msg,
-                                   struct Db db,
-                                   struct GoApi api,
-                                   struct GoQuerier querier,
-                                   uint64_t gas_limit,
-                                   bool print_debug,
-                                   uint64_t *gas_used,
-                                   struct UnmanagedVector *error_msg);
+struct UnmanagedVector instantiate2(struct cache_t *cache,
+                                    struct ByteSliceView checksum,
+                                    struct ByteSliceView env,
+                                    struct ByteSliceView info,
+                                    struct ByteSliceView msg,
+                                    struct Db db,
+                                    struct GoApi api,
+                                    struct GoQuerier querier,
+                                    uint64_t gas_limit,
+                                    bool print_debug,
+                                    uint64_t *gas_used,
+                                    struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector execute(struct cache_t *cache,
-                               struct ByteSliceView checksum,
-                               struct ByteSliceView env,
-                               struct ByteSliceView info,
-                               struct ByteSliceView msg,
-                               struct Db db,
-                               struct GoApi api,
-                               struct GoQuerier querier,
-                               uint64_t gas_limit,
-                               bool print_debug,
-                               uint64_t *gas_used,
-                               struct UnmanagedVector *error_msg);
+struct UnmanagedVector execute2(struct cache_t *cache,
+                                struct ByteSliceView checksum,
+                                struct ByteSliceView env,
+                                struct ByteSliceView info,
+                                struct ByteSliceView msg,
+                                struct Db db,
+                                struct GoApi api,
+                                struct GoQuerier querier,
+                                uint64_t gas_limit,
+                                bool print_debug,
+                                uint64_t *gas_used,
+                                struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector migrate(struct cache_t *cache,
-                               struct ByteSliceView checksum,
-                               struct ByteSliceView env,
-                               struct ByteSliceView msg,
-                               struct Db db,
-                               struct GoApi api,
-                               struct GoQuerier querier,
-                               uint64_t gas_limit,
-                               bool print_debug,
-                               uint64_t *gas_used,
-                               struct UnmanagedVector *error_msg);
+struct UnmanagedVector migrate2(struct cache_t *cache,
+                                struct ByteSliceView checksum,
+                                struct ByteSliceView env,
+                                struct ByteSliceView msg,
+                                struct Db db,
+                                struct GoApi api,
+                                struct GoQuerier querier,
+                                uint64_t gas_limit,
+                                bool print_debug,
+                                uint64_t *gas_used,
+                                struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector sudo(struct cache_t *cache,
-                            struct ByteSliceView checksum,
-                            struct ByteSliceView env,
-                            struct ByteSliceView msg,
-                            struct Db db,
-                            struct GoApi api,
-                            struct GoQuerier querier,
-                            uint64_t gas_limit,
-                            bool print_debug,
-                            uint64_t *gas_used,
-                            struct UnmanagedVector *error_msg);
-
-struct UnmanagedVector reply(struct cache_t *cache,
+struct UnmanagedVector sudo2(struct cache_t *cache,
                              struct ByteSliceView checksum,
                              struct ByteSliceView env,
                              struct ByteSliceView msg,
@@ -403,43 +393,31 @@ struct UnmanagedVector reply(struct cache_t *cache,
                              uint64_t *gas_used,
                              struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector query(struct cache_t *cache,
-                             struct ByteSliceView checksum,
-                             struct ByteSliceView env,
-                             struct ByteSliceView msg,
-                             struct Db db,
-                             struct GoApi api,
-                             struct GoQuerier querier,
-                             uint64_t gas_limit,
-                             bool print_debug,
-                             uint64_t *gas_used,
-                             struct UnmanagedVector *error_msg);
+struct UnmanagedVector reply2(struct cache_t *cache,
+                              struct ByteSliceView checksum,
+                              struct ByteSliceView env,
+                              struct ByteSliceView msg,
+                              struct Db db,
+                              struct GoApi api,
+                              struct GoQuerier querier,
+                              uint64_t gas_limit,
+                              bool print_debug,
+                              uint64_t *gas_used,
+                              struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector ibc_channel_open(struct cache_t *cache,
-                                        struct ByteSliceView checksum,
-                                        struct ByteSliceView env,
-                                        struct ByteSliceView msg,
-                                        struct Db db,
-                                        struct GoApi api,
-                                        struct GoQuerier querier,
-                                        uint64_t gas_limit,
-                                        bool print_debug,
-                                        uint64_t *gas_used,
-                                        struct UnmanagedVector *error_msg);
+struct UnmanagedVector query2(struct cache_t *cache,
+                              struct ByteSliceView checksum,
+                              struct ByteSliceView env,
+                              struct ByteSliceView msg,
+                              struct Db db,
+                              struct GoApi api,
+                              struct GoQuerier querier,
+                              uint64_t gas_limit,
+                              bool print_debug,
+                              uint64_t *gas_used,
+                              struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector ibc_channel_connect(struct cache_t *cache,
-                                           struct ByteSliceView checksum,
-                                           struct ByteSliceView env,
-                                           struct ByteSliceView msg,
-                                           struct Db db,
-                                           struct GoApi api,
-                                           struct GoQuerier querier,
-                                           uint64_t gas_limit,
-                                           bool print_debug,
-                                           uint64_t *gas_used,
-                                           struct UnmanagedVector *error_msg);
-
-struct UnmanagedVector ibc_channel_close(struct cache_t *cache,
+struct UnmanagedVector ibc_channel_open2(struct cache_t *cache,
                                          struct ByteSliceView checksum,
                                          struct ByteSliceView env,
                                          struct ByteSliceView msg,
@@ -451,7 +429,19 @@ struct UnmanagedVector ibc_channel_close(struct cache_t *cache,
                                          uint64_t *gas_used,
                                          struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector ibc_packet_receive(struct cache_t *cache,
+struct UnmanagedVector ibc_channel_connect2(struct cache_t *cache,
+                                            struct ByteSliceView checksum,
+                                            struct ByteSliceView env,
+                                            struct ByteSliceView msg,
+                                            struct Db db,
+                                            struct GoApi api,
+                                            struct GoQuerier querier,
+                                            uint64_t gas_limit,
+                                            bool print_debug,
+                                            uint64_t *gas_used,
+                                            struct UnmanagedVector *error_msg);
+
+struct UnmanagedVector ibc_channel_close2(struct cache_t *cache,
                                           struct ByteSliceView checksum,
                                           struct ByteSliceView env,
                                           struct ByteSliceView msg,
@@ -463,29 +453,41 @@ struct UnmanagedVector ibc_packet_receive(struct cache_t *cache,
                                           uint64_t *gas_used,
                                           struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector ibc_packet_ack(struct cache_t *cache,
-                                      struct ByteSliceView checksum,
-                                      struct ByteSliceView env,
-                                      struct ByteSliceView msg,
-                                      struct Db db,
-                                      struct GoApi api,
-                                      struct GoQuerier querier,
-                                      uint64_t gas_limit,
-                                      bool print_debug,
-                                      uint64_t *gas_used,
-                                      struct UnmanagedVector *error_msg);
+struct UnmanagedVector ibc_packet_receive2(struct cache_t *cache,
+                                           struct ByteSliceView checksum,
+                                           struct ByteSliceView env,
+                                           struct ByteSliceView msg,
+                                           struct Db db,
+                                           struct GoApi api,
+                                           struct GoQuerier querier,
+                                           uint64_t gas_limit,
+                                           bool print_debug,
+                                           uint64_t *gas_used,
+                                           struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector ibc_packet_timeout(struct cache_t *cache,
-                                          struct ByteSliceView checksum,
-                                          struct ByteSliceView env,
-                                          struct ByteSliceView msg,
-                                          struct Db db,
-                                          struct GoApi api,
-                                          struct GoQuerier querier,
-                                          uint64_t gas_limit,
-                                          bool print_debug,
-                                          uint64_t *gas_used,
-                                          struct UnmanagedVector *error_msg);
+struct UnmanagedVector ibc_packet_ack2(struct cache_t *cache,
+                                       struct ByteSliceView checksum,
+                                       struct ByteSliceView env,
+                                       struct ByteSliceView msg,
+                                       struct Db db,
+                                       struct GoApi api,
+                                       struct GoQuerier querier,
+                                       uint64_t gas_limit,
+                                       bool print_debug,
+                                       uint64_t *gas_used,
+                                       struct UnmanagedVector *error_msg);
+
+struct UnmanagedVector ibc_packet_timeout2(struct cache_t *cache,
+                                           struct ByteSliceView checksum,
+                                           struct ByteSliceView env,
+                                           struct ByteSliceView msg,
+                                           struct Db db,
+                                           struct GoApi api,
+                                           struct GoQuerier querier,
+                                           uint64_t gas_limit,
+                                           bool print_debug,
+                                           uint64_t *gas_used,
+                                           struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector new_unmanaged_vector(bool nil, const uint8_t *ptr, uintptr_t length);
 
@@ -494,6 +496,6 @@ void destroy_unmanaged_vector(struct UnmanagedVector v);
 /**
  * Returns a version number of this library as a C string.
  *
- * The string is owned by libwasmvm and must not be mutated or destroyed by the caller.
+ * The string is owned by libwasmvm_v1 and must not be mutated or destroyed by the caller.
  */
 const char *version_str(void);

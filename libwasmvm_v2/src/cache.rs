@@ -25,7 +25,7 @@ pub fn to_cache(ptr: *mut cache_t) -> Option<&'static mut Cache<GoApi, GoStorage
 }
 
 #[no_mangle]
-pub extern "C" fn init_cache(
+pub extern "C" fn init_cache2(
     data_dir: ByteSliceView,
     available_capabilities: ByteSliceView,
     cache_size: u32,            // in MiB
@@ -84,7 +84,7 @@ fn do_init_cache(
 }
 
 #[no_mangle]
-pub extern "C" fn save_wasm(
+pub extern "C" fn save_wasm2(
     cache: *mut cache_t,
     wasm: ByteSliceView,
     error_msg: Option<&mut UnmanagedVector>,
@@ -112,7 +112,7 @@ fn do_save_wasm(
 }
 
 #[no_mangle]
-pub extern "C" fn remove_wasm(
+pub extern "C" fn remove_wasm2(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     error_msg: Option<&mut UnmanagedVector>,
@@ -141,7 +141,7 @@ fn do_remove_wasm(
 }
 
 #[no_mangle]
-pub extern "C" fn load_wasm(
+pub extern "C" fn load_wasm2(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     error_msg: Option<&mut UnmanagedVector>,
@@ -171,7 +171,7 @@ fn do_load_wasm(
 }
 
 #[no_mangle]
-pub extern "C" fn pin(
+pub extern "C" fn pin2(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     error_msg: Option<&mut UnmanagedVector>,
@@ -201,7 +201,7 @@ fn do_pin(
 }
 
 #[no_mangle]
-pub extern "C" fn unpin(
+pub extern "C" fn unpin2(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     error_msg: Option<&mut UnmanagedVector>,
@@ -266,7 +266,7 @@ fn set_to_csv(set: HashSet<String>) -> String {
 }
 
 #[no_mangle]
-pub extern "C" fn analyze_code(
+pub extern "C" fn analyze_code2(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     error_msg: Option<&mut UnmanagedVector>,
@@ -345,7 +345,7 @@ impl From<cosmwasm_vm::Metrics> for Metrics {
 }
 
 #[no_mangle]
-pub extern "C" fn get_metrics(
+pub extern "C" fn get_metrics2(
     cache: *mut cache_t,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> Metrics {
@@ -373,7 +373,7 @@ fn do_get_metrics(cache: &mut Cache<GoApi, GoStorage, GoQuerier>) -> Result<Metr
 /// This must be called exactly once for any `*cache_t` returned by `init_cache`
 /// and cannot be called on any other pointer.
 #[no_mangle]
-pub extern "C" fn release_cache(cache: *mut cache_t) {
+pub extern "C" fn release_cache2(cache: *mut cache_t) {
     if !cache.is_null() {
         // this will free cache when it goes out of scope
         let _ = unsafe { Box::from_raw(cache as *mut Cache<GoApi, GoStorage, GoQuerier>) };

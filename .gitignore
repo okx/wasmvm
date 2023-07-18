@@ -1,4 +1,4 @@
-# Please also see libwasmvm/.gitignore for the Rust-specific ignored files.
+# Please also see libwasmvm_v1/.gitignore for the Rust-specific ignored files.
 
 **/*.rs.bk
 *.iml

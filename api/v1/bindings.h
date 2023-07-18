@@ -490,6 +490,6 @@ void destroy_unmanaged_vector(struct UnmanagedVector v);
 /**
  * Returns a version number of this library as a C string.
  *
- * The string is owned by libwasmvm and must not be mutated or destroyed by the caller.
+ * The string is owned by libwasmvm_v1 and must not be mutated or destroyed by the caller.
  */
 const char *version_str(void);

@@ -1924,7 +1924,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "718ed7c55c2add6548cca3ddd6383d738cd73b892df400e96b9aa876f0141d7a"
 
 [[package]]
-name = "wasmvm_v2"
+name = "wasmvm2"
 version = "1.2.3"
 dependencies = [
  "cbindgen",

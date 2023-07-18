@@ -28,7 +28,7 @@ fn into_backend(db: Db, api: GoApi, querier: GoQuerier) -> Backend<GoApi, GoStor
 }
 
 #[no_mangle]
-pub extern "C" fn instantiate(
+pub extern "C" fn instantiate2(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     env: ByteSliceView,
@@ -60,7 +60,7 @@ pub extern "C" fn instantiate(
 }
 
 #[no_mangle]
-pub extern "C" fn execute(
+pub extern "C" fn execute2(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     env: ByteSliceView,
@@ -74,6 +74,9 @@ pub extern "C" fn execute(
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
+
+    println!("-------------libwasm-v2 execute-----------------");
+
     call_3_args(
         call_execute_raw,
         cache,
@@ -92,7 +95,7 @@ pub extern "C" fn execute(
 }
 
 #[no_mangle]
-pub extern "C" fn migrate(
+pub extern "C" fn migrate2(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     env: ByteSliceView,
@@ -122,7 +125,7 @@ pub extern "C" fn migrate(
 }
 
 #[no_mangle]
-pub extern "C" fn sudo(
+pub extern "C" fn sudo2(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     env: ByteSliceView,
@@ -152,7 +155,7 @@ pub extern "C" fn sudo(
 }
 
 #[no_mangle]
-pub extern "C" fn reply(
+pub extern "C" fn reply2(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     env: ByteSliceView,
@@ -182,7 +185,7 @@ pub extern "C" fn reply(
 }
 
 #[no_mangle]
-pub extern "C" fn query(
+pub extern "C" fn query2(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     env: ByteSliceView,
@@ -212,7 +215,7 @@ pub extern "C" fn query(
 }
 
 #[no_mangle]
-pub extern "C" fn ibc_channel_open(
+pub extern "C" fn ibc_channel_open2(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     env: ByteSliceView,
@@ -242,7 +245,7 @@ pub extern "C" fn ibc_channel_open(
 }
 
 #[no_mangle]
-pub extern "C" fn ibc_channel_connect(
+pub extern "C" fn ibc_channel_connect2(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     env: ByteSliceView,
@@ -272,7 +275,7 @@ pub extern "C" fn ibc_channel_connect(
 }
 
 #[no_mangle]
-pub extern "C" fn ibc_channel_close(
+pub extern "C" fn ibc_channel_close2(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     env: ByteSliceView,
@@ -302,7 +305,7 @@ pub extern "C" fn ibc_channel_close(
 }
 
 #[no_mangle]
-pub extern "C" fn ibc_packet_receive(
+pub extern "C" fn ibc_packet_receive2(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     env: ByteSliceView,
@@ -332,7 +335,7 @@ pub extern "C" fn ibc_packet_receive(
 }
 
 #[no_mangle]
-pub extern "C" fn ibc_packet_ack(
+pub extern "C" fn ibc_packet_ack2(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     env: ByteSliceView,
@@ -362,7 +365,7 @@ pub extern "C" fn ibc_packet_ack(
 }
 
 #[no_mangle]
-pub extern "C" fn ibc_packet_timeout(
+pub extern "C" fn ibc_packet_timeout2(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     env: ByteSliceView,
