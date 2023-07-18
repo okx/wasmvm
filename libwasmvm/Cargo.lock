@@ -218,6 +218,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-crypto"
 version = "1.2.6"
+source = "git+https://github.com/okx/cosmwasm.git?branch=lyh/cross-call-v126#d32e3e0526e4aa77596e867d4421f36f94b87aac"
 dependencies = [
  "digest 0.10.3",
  "ed25519-zebra",
@@ -229,6 +230,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-derive"
 version = "1.2.6"
+source = "git+https://github.com/okx/cosmwasm.git?branch=lyh/cross-call-v126#d32e3e0526e4aa77596e867d4421f36f94b87aac"
 dependencies = [
  "syn",
 ]
@@ -236,6 +238,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-std"
 version = "1.2.6"
+source = "git+https://github.com/okx/cosmwasm.git?branch=lyh/cross-call-v126#d32e3e0526e4aa77596e867d4421f36f94b87aac"
 dependencies = [
  "base64",
  "cosmwasm-crypto",
@@ -254,6 +257,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm"
 version = "1.2.6"
+source = "git+https://github.com/okx/cosmwasm.git?branch=lyh/cross-call-v126#d32e3e0526e4aa77596e867d4421f36f94b87aac"
 dependencies = [
  "bitflags",
  "bytecheck",

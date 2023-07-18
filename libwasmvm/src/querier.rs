@@ -122,14 +122,11 @@ impl Querier for GoQuerier {
                           block_env: &Env,
                           gas_limit: u64
     ) -> (VmResult<Vec<u8>>, GasInfo) {
-        println!("rust wasmvm call contract_address: {:?} , sender address {:?}", contract_address, info.sender.clone());
-
         let mut tc_used_gas = 0_u64;
         // need check transfer
         if info.funds.len() != 0 {
             let mut error_msg = UnmanagedVector::default();
             let coins = to_vec(&info.funds).unwrap();
-            println!("data is {:?}", String::from_utf8(coins.clone()).unwrap());
             let go_result: GoError = (self.vtable.transfer_coins)(
                 self.state,
                 &mut tc_used_gas as *mut u64,
@@ -227,8 +224,6 @@ impl Querier for GoQuerier {
         ret_gas_uesd += gas_info;
         (self.vtable.release)(unsafe{(*res_store).state});
 
-        println!("the call all gas is {:?}, do_call gas is {:?}, gci_used_gas {}, tc_used_gas {}", ret_gas_uesd.clone(), gas_info.clone(), gci_used_gas, tc_used_gas);
-
         (result, ret_gas_uesd)
     }
 
@@ -239,9 +234,6 @@ impl Querier for GoQuerier {
                                                                       block_env: &Env,
                                                                       gas_limit: u64
     ) -> (VmResult<Vec<u8>>, GasInfo) {
-        println!("rust wasmvm delegate_call contract_address: {:?}, caller address {:?}, sender address {:?}",
-                 contract_address, env.delegate_contract_addr.clone(), info.sender.clone());
-
         let mut res_code_hash = UnmanagedVector::default();
         let mut res_store: *mut Db = std::ptr::null_mut();
         let mut res_querier: *mut GoQuerier = std::ptr::null_mut();
@@ -317,7 +309,6 @@ impl Querier for GoQuerier {
         ret_gas_uesd += gas_info;
         (self.vtable.release)(unsafe{(*res_store).state});
 
-        println!("the call all gas is {:?}, do_call gas is {:?}, gci_used_gas {}", ret_gas_uesd.clone(), gas_info.clone(), gci_used_gas);
         (result, ret_gas_uesd)
     }
 }
@@ -359,7 +350,6 @@ pub fn do_call<A: BackendApi, S: Storage, Q: Querier>(
             let info = to_vec(info).unwrap();
             let result = call_execute_raw(&mut ins, &benv, &info, call_msg);
             let gas_rep = ins.create_gas_report();
-            println!("rust wasmvm the call_execute {:?}", gas_rep.clone());
             (result, GasInfo::new(gas_rep.used_internally, gas_rep.used_externally))
         }
         Err(err) => {
