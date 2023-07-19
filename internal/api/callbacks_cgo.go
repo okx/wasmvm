@@ -14,6 +14,7 @@ GoError cNext(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Unman
 // imports (api)
 GoError cHumanAddress(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 GoError cCanonicalAddress(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
+GoError cContractExternal(api_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 // imports (querier)
 GoError cQueryExternal(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 GoError cGetCallInfo(querier_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, UnmanagedVector *errOut);
@@ -46,6 +47,10 @@ GoError cCanonicalAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest
 }
 GoError cHumanAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas) {
     return cHumanAddress(ptr, src, dest, errOut, used_gas);
+}
+
+GoError cContractExternal_cgo(api_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut) {
+    return cContractExternal(ptr, gas_limit, used_gas, request, result, errOut);
 }
 
 // Gateway functions (querier)
