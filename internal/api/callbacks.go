@@ -405,6 +405,9 @@ func cContractExternal(ptr *C.api_t, gasLimit cu64, usedGas *cu64, request C.U8S
 		return C.GoError_User
 	}
 
+	if api.Contract == nil {
+		panic("`api.ContractExternal()` can not be supported in this case.")
+	}
 	bz, cost, err := api.Contract(req, uint64(gasLimit))
 	*usedGas = (cu64)(cost)
 
@@ -414,7 +417,7 @@ func cContractExternal(ptr *C.api_t, gasLimit cu64, usedGas *cu64, request C.U8S
 		return C.GoError_User
 	}
 	if len(bz) == 0 {
-		panic(fmt.Sprintf("`api.Contract()` returned an empty string for %q", req))
+		panic(fmt.Sprintf("`api.ContractExternal()` returned an empty string for %q", req))
 	}
 	*result = newUnmanagedVector([]byte(bz))
 	return C.GoError_None
