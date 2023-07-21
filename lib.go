@@ -127,7 +127,7 @@ func (vm *VM) Instantiate(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-	block_heigh uint64,
+	block_num uint64,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -137,7 +137,7 @@ func (vm *VM) Instantiate(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Instantiate(vm.cache, checksum, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_heigh)
+	data, gasUsed, err := api.Instantiate(vm.cache, checksum, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_num)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -176,7 +176,7 @@ func (vm *VM) Execute(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-	block_heigh uint64,
+	block_num uint64,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -186,7 +186,7 @@ func (vm *VM) Execute(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Execute(vm.cache, checksum, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_heigh)
+	data, gasUsed, err := api.Execute(vm.cache, checksum, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_num)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -221,13 +221,13 @@ func (vm *VM) Query(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-	block_heigh uint64,
+	block_num uint64,
 ) ([]byte, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Query(vm.cache, checksum, envBin, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_heigh)
+	data, gasUsed, err := api.Query(vm.cache, checksum, envBin, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_num)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -265,13 +265,13 @@ func (vm *VM) Migrate(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-	block_heigh uint64,
+	block_num uint64,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Migrate(vm.cache, checksum, envBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_heigh)
+	data, gasUsed, err := api.Migrate(vm.cache, checksum, envBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_num)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -309,13 +309,13 @@ func (vm *VM) Sudo(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-	block_heigh uint64,
+	block_num uint64,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Sudo(vm.cache, checksum, envBin, sudoMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_heigh)
+	data, gasUsed, err := api.Sudo(vm.cache, checksum, envBin, sudoMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_num)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -351,7 +351,7 @@ func (vm *VM) Reply(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-	block_heigh uint64,
+	block_num uint64,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -361,7 +361,7 @@ func (vm *VM) Reply(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Reply(vm.cache, checksum, envBin, replyBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_heigh)
+	data, gasUsed, err := api.Reply(vm.cache, checksum, envBin, replyBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_num)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -395,7 +395,7 @@ func (vm *VM) IBCChannelOpen(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-	block_heigh uint64,
+	block_num uint64,
 ) (*types.IBC3ChannelOpenResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -405,7 +405,7 @@ func (vm *VM) IBCChannelOpen(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCChannelOpen(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_heigh)
+	data, gasUsed, err := api.IBCChannelOpen(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_num)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -439,7 +439,7 @@ func (vm *VM) IBCChannelConnect(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-	block_heigh uint64,
+	block_num uint64,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -449,7 +449,7 @@ func (vm *VM) IBCChannelConnect(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCChannelConnect(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_heigh)
+	data, gasUsed, err := api.IBCChannelConnect(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_num)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -483,7 +483,7 @@ func (vm *VM) IBCChannelClose(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-	block_heigh uint64,
+	block_num uint64,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -493,7 +493,7 @@ func (vm *VM) IBCChannelClose(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCChannelClose(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_heigh)
+	data, gasUsed, err := api.IBCChannelClose(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_num)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -527,7 +527,7 @@ func (vm *VM) IBCPacketReceive(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-	block_heigh uint64,
+	block_num uint64,
 ) (*types.IBCReceiveResult, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -537,7 +537,7 @@ func (vm *VM) IBCPacketReceive(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCPacketReceive(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_heigh)
+	data, gasUsed, err := api.IBCPacketReceive(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_num)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -569,7 +569,7 @@ func (vm *VM) IBCPacketAck(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-	block_heigh uint64,
+	block_num uint64,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -579,7 +579,7 @@ func (vm *VM) IBCPacketAck(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCPacketAck(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_heigh)
+	data, gasUsed, err := api.IBCPacketAck(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_num)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -614,7 +614,7 @@ func (vm *VM) IBCPacketTimeout(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-	block_heigh uint64,
+	block_num uint64,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -624,7 +624,7 @@ func (vm *VM) IBCPacketTimeout(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCPacketTimeout(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_heigh)
+	data, gasUsed, err := api.IBCPacketTimeout(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug, block_num)
 	if err != nil {
 		return nil, gasUsed, err
 	}
