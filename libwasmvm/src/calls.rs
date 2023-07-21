@@ -41,6 +41,7 @@ pub extern "C" fn instantiate(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
+    block_heigh: u64,
 ) -> UnmanagedVector {
     call_3_args(
         call_instantiate_raw,
@@ -56,6 +57,7 @@ pub extern "C" fn instantiate(
         print_debug,
         gas_used,
         error_msg,
+        block_heigh,
     )
 }
 
@@ -73,6 +75,7 @@ pub extern "C" fn execute(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
+    block_heigh: u64,
 ) -> UnmanagedVector {
     call_3_args(
         call_execute_raw,
@@ -88,6 +91,7 @@ pub extern "C" fn execute(
         print_debug,
         gas_used,
         error_msg,
+        block_heigh,
     )
 }
 
@@ -104,6 +108,7 @@ pub extern "C" fn migrate(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
+    block_heigh: u64,
 ) -> UnmanagedVector {
     call_2_args(
         call_migrate_raw,
@@ -118,6 +123,7 @@ pub extern "C" fn migrate(
         print_debug,
         gas_used,
         error_msg,
+        block_heigh,
     )
 }
 
@@ -134,6 +140,7 @@ pub extern "C" fn sudo(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
+    block_heigh: u64,
 ) -> UnmanagedVector {
     call_2_args(
         call_sudo_raw,
@@ -148,6 +155,7 @@ pub extern "C" fn sudo(
         print_debug,
         gas_used,
         error_msg,
+        block_heigh,
     )
 }
 
@@ -164,6 +172,7 @@ pub extern "C" fn reply(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
+    block_heigh: u64,
 ) -> UnmanagedVector {
     call_2_args(
         call_reply_raw,
@@ -178,6 +187,7 @@ pub extern "C" fn reply(
         print_debug,
         gas_used,
         error_msg,
+        block_heigh,
     )
 }
 
@@ -194,6 +204,7 @@ pub extern "C" fn query(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
+    block_heigh: u64,
 ) -> UnmanagedVector {
     call_2_args(
         call_query_raw,
@@ -208,6 +219,7 @@ pub extern "C" fn query(
         print_debug,
         gas_used,
         error_msg,
+        block_heigh,
     )
 }
 
@@ -224,6 +236,7 @@ pub extern "C" fn ibc_channel_open(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
+    block_heigh: u64,
 ) -> UnmanagedVector {
     call_2_args(
         call_ibc_channel_open_raw,
@@ -238,6 +251,7 @@ pub extern "C" fn ibc_channel_open(
         print_debug,
         gas_used,
         error_msg,
+        block_heigh,
     )
 }
 
@@ -254,6 +268,7 @@ pub extern "C" fn ibc_channel_connect(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
+    block_heigh: u64,
 ) -> UnmanagedVector {
     call_2_args(
         call_ibc_channel_connect_raw,
@@ -268,6 +283,7 @@ pub extern "C" fn ibc_channel_connect(
         print_debug,
         gas_used,
         error_msg,
+        block_heigh,
     )
 }
 
@@ -284,6 +300,7 @@ pub extern "C" fn ibc_channel_close(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
+    block_heigh: u64,
 ) -> UnmanagedVector {
     call_2_args(
         call_ibc_channel_close_raw,
@@ -298,6 +315,7 @@ pub extern "C" fn ibc_channel_close(
         print_debug,
         gas_used,
         error_msg,
+        block_heigh,
     )
 }
 
@@ -314,6 +332,7 @@ pub extern "C" fn ibc_packet_receive(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
+    block_heigh: u64,
 ) -> UnmanagedVector {
     call_2_args(
         call_ibc_packet_receive_raw,
@@ -328,6 +347,7 @@ pub extern "C" fn ibc_packet_receive(
         print_debug,
         gas_used,
         error_msg,
+        block_heigh,
     )
 }
 
@@ -344,6 +364,7 @@ pub extern "C" fn ibc_packet_ack(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
+    block_heigh: u64,
 ) -> UnmanagedVector {
     call_2_args(
         call_ibc_packet_ack_raw,
@@ -358,6 +379,7 @@ pub extern "C" fn ibc_packet_ack(
         print_debug,
         gas_used,
         error_msg,
+        block_heigh,
     )
 }
 
@@ -374,6 +396,7 @@ pub extern "C" fn ibc_packet_timeout(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
+    block_heigh: u64,
 ) -> UnmanagedVector {
     call_2_args(
         call_ibc_packet_timeout_raw,
@@ -388,6 +411,7 @@ pub extern "C" fn ibc_packet_timeout(
         print_debug,
         gas_used,
         error_msg,
+        block_heigh,
     )
 }
 
@@ -413,6 +437,7 @@ fn call_2_args(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
+    block_heigh: u64,
 ) -> UnmanagedVector {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
@@ -428,6 +453,7 @@ fn call_2_args(
                 gas_limit,
                 print_debug,
                 gas_used,
+                block_heigh,
             )
         }))
         .unwrap_or_else(|err| {
@@ -453,6 +479,7 @@ fn do_call_2_args(
     gas_limit: u64,
     print_debug: bool,
     gas_used: Option<&mut u64>,
+    block_heigh: u64,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
     let checksum: Checksum = checksum
@@ -467,7 +494,7 @@ fn do_call_2_args(
         gas_limit,
         print_debug,
     };
-    let mut instance = cache.get_instance(&checksum, backend, options)?;
+    let mut instance = cache.get_instance(&checksum, backend, options, block_heigh)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = vm_fn(&mut instance, arg1, arg2);
     *gas_used = instance.create_gas_report().used_internally;
@@ -499,6 +526,7 @@ fn call_3_args(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
+    block_heigh: u64,
 ) -> UnmanagedVector {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
@@ -515,6 +543,7 @@ fn call_3_args(
                 gas_limit,
                 print_debug,
                 gas_used,
+                block_heigh,
             )
         }))
         .unwrap_or_else(|err| {
@@ -540,6 +569,7 @@ fn do_call_3_args(
     gas_limit: u64,
     print_debug: bool,
     gas_used: Option<&mut u64>,
+    block_heigh: u64,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
     let checksum: Checksum = checksum
@@ -555,7 +585,7 @@ fn do_call_3_args(
         gas_limit,
         print_debug,
     };
-    let mut instance = cache.get_instance(&checksum, backend, options)?;
+    let mut instance = cache.get_instance(&checksum, backend, options, block_heigh)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = vm_fn(&mut instance, arg1, arg2, arg3);
     *gas_used = instance.create_gas_report().used_internally;
