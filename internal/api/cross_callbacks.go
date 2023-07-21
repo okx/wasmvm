@@ -26,7 +26,7 @@ func RegisterTransferCoins(fnn func(q unsafe.Pointer, contractAddress, caller st
 	TransferCoinsFunc = fnn
 }
 
-func GetCallInfo(p unsafe.Pointer, usedGas *cu64, contrAddr C.U8SliceView, storeAddr C.U8SliceView, resCodeHash *C.UnmanagedVector, resStore **C.Db, resQuerier **C.GoQuerier, errOut *C.UnmanagedVector) (ret C.GoError) {
+func GetCallInfo(p unsafe.Pointer, usedGas *cu64, contrAddr C.U8SliceView, storeAddr C.U8SliceView, resCodeHash *C.UnmanagedVector, resStore **C.Db, resQuerier **C.GoQuerier, callID *cu64, errOut *C.UnmanagedVector) (ret C.GoError) {
 	if GetCallInfoFunc == nil {
 		*errOut = newUnmanagedVector([]byte("the GetCallInfoFunc is nil"))
 		return C.GoError_Other
@@ -43,7 +43,9 @@ func GetCallInfo(p unsafe.Pointer, usedGas *cu64, contrAddr C.U8SliceView, store
 		return C.GoError_Other
 	}
 	*resCodeHash = newUnmanagedVector(codeHash)
-	dbstate := buildDBState(store, startCall())
+	scallID := startCall()
+	*callID = (cu64)(scallID)
+	dbstate := buildDBState(store, scallID)
 	rs := buildDB(&dbstate, &gasMeter)
 	*resStore = &rs
 	rq := buildQuerier(&querier)
@@ -63,12 +65,8 @@ func GetWasmCacheInfo(resGoApi **C.GoApi, resCache_t **C.cache_t, errOut *C.Unma
 	return C.GoError_None
 }
 
-func Release(ptr *C.db_t) (ret C.GoError) {
-	if ptr == nil {
-		return C.GoError_None
-	}
-	state := (*DBState)(unsafe.Pointer(ptr))
-	endCall(state.CallID)
+func Release(callID cu64) (ret C.GoError) {
+	endCall(uint64(callID))
 	return C.GoError_None
 }
 
