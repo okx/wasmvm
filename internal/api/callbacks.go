@@ -18,9 +18,9 @@ typedef GoError (*humanize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVec
 typedef GoError (*canonicalize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 typedef GoError (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 typedef GoError (*contract_external_fn)(api_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
-typedef GoError (*get_call_info_fn)(querier_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, UnmanagedVector *errOut);
+typedef GoError (*get_call_info_fn)(querier_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, uint64_t *call_id, UnmanagedVector *errOut);
 typedef GoError (*get_wasm_info_fn)(GoApi **resGoApi, cache_t **resCache_t, UnmanagedVector *errOut);
-typedef GoError (*release_fn)(db_t *ptr);
+typedef GoError (*release_fn)(uint64_t call_id);
 typedef GoError (*transfer_coins_fn)(querier_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView caller, U8SliceView coins, UnmanagedVector *errOut);
 
 // forward declarations (db)
@@ -36,9 +36,9 @@ GoError cCanonicalAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest
 GoError cContractExternal_cgo(api_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 // and querier
 GoError cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
-GoError cGetCallInfo_cgo(querier_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, UnmanagedVector *errOut);
+GoError cGetCallInfo_cgo(querier_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, uint64_t *call_id, UnmanagedVector *errOut);
 GoError cGetWasmInfo_cgo(GoApi **resGoApi, cache_t **resCache_t, UnmanagedVector *errOut);
-GoError cRelease_cgo(db_t *ptr);
+GoError cRelease_cgo(uint64_t call_id);
 GoError cTransferCoins_cgo(querier_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView caller, U8SliceView coins, UnmanagedVector *errOut);
 */
 import "C"
@@ -477,9 +477,9 @@ func cQueryExternal(ptr *C.querier_t, gasLimit cu64, usedGas *cu64, request C.U8
 }
 
 //export cGetCallInfo
-func cGetCallInfo(ptr *C.querier_t, usedGas *cu64, contractAddress C.U8SliceView, storeAddress C.U8SliceView, resCodeHash *C.UnmanagedVector, resStore **C.Db, result **C.GoQuerier, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cGetCallInfo(ptr *C.querier_t, usedGas *cu64, contractAddress C.U8SliceView, storeAddress C.U8SliceView, resCodeHash *C.UnmanagedVector, resStore **C.Db, result **C.GoQuerier, callID *cu64, errOut *C.UnmanagedVector) (ret C.GoError) {
 	defer recoverPanic(&ret)
-	return GetCallInfo(unsafe.Pointer(ptr), usedGas, contractAddress, storeAddress, resCodeHash, resStore, result, errOut)
+	return GetCallInfo(unsafe.Pointer(ptr), usedGas, contractAddress, storeAddress, resCodeHash, resStore, result, callID, errOut)
 }
 
 //export cGetWasmInfo
@@ -489,9 +489,9 @@ func cGetWasmInfo(resGoApi **C.GoApi, resCache_t **C.cache_t, errOut *C.Unmanage
 }
 
 //export cRelease
-func cRelease(ptr *C.db_t) (ret C.GoError) {
+func cRelease(callID cu64) (ret C.GoError) {
 	defer recoverPanic(&ret)
-	return Release(ptr)
+	return Release(callID)
 }
 
 //export cTransferCoins

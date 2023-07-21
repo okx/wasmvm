@@ -218,7 +218,6 @@ dependencies = [
 [[package]]
 name = "cosmwasm-crypto"
 version = "1.2.6"
-source = "git+https://github.com/okx/cosmwasm.git?branch=create-call#ad52310f2a6f00664e1f5b2e4a1dd5e1e045e097"
 dependencies = [
  "digest 0.10.3",
  "ed25519-zebra",
@@ -230,7 +229,6 @@ dependencies = [
 [[package]]
 name = "cosmwasm-derive"
 version = "1.2.6"
-source = "git+https://github.com/okx/cosmwasm.git?branch=create-call#ad52310f2a6f00664e1f5b2e4a1dd5e1e045e097"
 dependencies = [
  "syn",
 ]
@@ -238,7 +236,6 @@ dependencies = [
 [[package]]
 name = "cosmwasm-std"
 version = "1.2.6"
-source = "git+https://github.com/okx/cosmwasm.git?branch=create-call#ad52310f2a6f00664e1f5b2e4a1dd5e1e045e097"
 dependencies = [
  "base64",
  "cosmwasm-crypto",
@@ -257,7 +254,6 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm"
 version = "1.2.6"
-source = "git+https://github.com/okx/cosmwasm.git?branch=create-call#ad52310f2a6f00664e1f5b2e4a1dd5e1e045e097"
 dependencies = [
  "bitflags",
  "bytecheck",
