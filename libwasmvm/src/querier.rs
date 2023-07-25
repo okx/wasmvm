@@ -3,7 +3,7 @@ use cosmwasm_vm::{BackendError, BackendResult, GasInfo, Querier, Storage, VmErro
 
 use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
-use crate::db::{Db, db_t};
+use crate::db::{Db};
 use crate::storage::GoStorage;
 use crate::api::GoApi;
 use crate::cache::{cache_t};
@@ -39,6 +39,7 @@ pub struct Querier_vtable {
         *mut UnmanagedVector,
         *mut *mut Db,
         *mut *mut GoQuerier,
+        *mut u64,             // the callID
         *mut UnmanagedVector, // error message output
     ) -> i32,
     pub get_wasm_info: extern "C" fn (
@@ -47,7 +48,7 @@ pub struct Querier_vtable {
         *mut UnmanagedVector, // error message output
     ) -> i32,
     pub release: extern "C" fn (
-        *mut db_t,
+        u64,                  // callID
     ) -> i32,
     pub transfer_coins: extern "C" fn (
         *const querier_t,
@@ -153,6 +154,7 @@ impl Querier for GoQuerier {
         let mut res_querier: *mut GoQuerier = std::ptr::null_mut();
         let mut error_msg = UnmanagedVector::default();
         let mut gci_used_gas = 0_u64;
+        let mut call_id = 0_u64;
 
         let go_result: GoError = (self.vtable.get_call_info)(
             self.state,
@@ -162,6 +164,7 @@ impl Querier for GoQuerier {
             &mut res_code_hash as *mut UnmanagedVector,
             &mut res_store,
             &mut res_querier,
+            &mut call_id as *mut u64,
             &mut error_msg as *mut UnmanagedVector,
         ).into();
 
@@ -222,7 +225,7 @@ impl Querier for GoQuerier {
         let (result, gas_info) = do_call(env1, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit, Addr::unchecked(contract_address.clone()));
 
         ret_gas_uesd += gas_info;
-        (self.vtable.release)(unsafe{(*res_store).state});
+        (self.vtable.release)(call_id);
 
         (result, ret_gas_uesd)
     }
@@ -239,6 +242,7 @@ impl Querier for GoQuerier {
         let mut res_querier: *mut GoQuerier = std::ptr::null_mut();
         let mut error_msg = UnmanagedVector::default();
         let mut gci_used_gas = 0_u64;
+        let mut call_id = 0_u64;
 
         let go_result: GoError = (self.vtable.get_call_info)(
             self.state,
@@ -248,6 +252,7 @@ impl Querier for GoQuerier {
             &mut res_code_hash as *mut UnmanagedVector,
             &mut res_store,
             &mut res_querier,
+            &mut call_id as *mut u64,
             &mut error_msg as *mut UnmanagedVector,
         ).into();
 
@@ -307,7 +312,7 @@ impl Querier for GoQuerier {
         let (result, gas_info) = do_call(env, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit, env.delegate_contract_addr.clone());
 
         ret_gas_uesd += gas_info;
-        (self.vtable.release)(unsafe{(*res_store).state});
+        (self.vtable.release)(call_id);
 
         (result, ret_gas_uesd)
     }
@@ -350,6 +355,7 @@ pub fn do_call<A: BackendApi, S: Storage, Q: Querier>(
             let info = to_vec(info).unwrap();
             let result = call_execute_raw(&mut ins, &benv, &info, call_msg);
             let gas_rep = ins.create_gas_report();
+            ins.recycle();
             (result, GasInfo::new(gas_rep.used_internally, gas_rep.used_externally))
         }
         Err(err) => {

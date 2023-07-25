@@ -16,9 +16,9 @@ GoError cHumanAddress(api_t *ptr, U8SliceView src, UnmanagedVector *dest, Unmana
 GoError cCanonicalAddress(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 // imports (querier)
 GoError cQueryExternal(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
-GoError cGetCallInfo(querier_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, UnmanagedVector *errOut);
+GoError cGetCallInfo(querier_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, uint64_t *call_id, UnmanagedVector *errOut);
 GoError cGetWasmInfo(GoApi **resGoApi, cache_t **resCache_t, UnmanagedVector *errOut);
-GoError cRelease(db_t *ptr);
+GoError cRelease(uint64_t call_id);
 GoError cTransferCoins(querier_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView caller, U8SliceView coins, UnmanagedVector *errOut);
 
 // Gateway functions (db)
@@ -53,16 +53,16 @@ GoError cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_ga
     return cQueryExternal(ptr, gas_limit, used_gas, request, result, errOut);
 }
 
-GoError cGetCallInfo_cgo(querier_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, UnmanagedVector *errOut) {
-    return cGetCallInfo(ptr, used_gas, contractAddress, storeAddress, resCodeHash, resStore, resQuerier, errOut);
+GoError cGetCallInfo_cgo(querier_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, uint64_t *call_id, UnmanagedVector *errOut) {
+    return cGetCallInfo(ptr, used_gas, contractAddress, storeAddress, resCodeHash, resStore, resQuerier, call_id, errOut);
 }
 
 GoError cGetWasmInfo_cgo(GoApi **resGoApi, cache_t **resCache_t, UnmanagedVector *errOut) {
     return cGetWasmInfo(resGoApi, resCache_t, errOut);
 }
 
-GoError cRelease_cgo(db_t *ptr) {
-   return cRelease(ptr);
+GoError cRelease_cgo(uint64_t call_id) {
+   return cRelease(call_id);
 }
 
 GoError cTransferCoins_cgo(querier_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView caller, U8SliceView coins, UnmanagedVector *errOut) {
