@@ -45,6 +45,10 @@ func (vm *VM) UpdateCurBlockNum(blockNum uint64) error {
 	return api.UpdateCurBlockNum(vm.cache, blockNum)
 }
 
+func (vm *VM) UpdateMilestone(milestone string, blockNum uint64) error {
+	return api.UpdateMilestone(vm.cache, milestone, blockNum)
+}
+
 // Deprecated: Renamed to StoreCode
 func (vm *VM) Create(code WasmCode) (Checksum, error) {
 	return vm.StoreCode(code)
