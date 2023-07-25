@@ -36,22 +36,17 @@ type Cache struct {
 
 type Querier = types.Querier
 
-func InitCache(dataDir string, supportedCapabilities string, cacheSize uint32, instanceMemoryLimit uint32, milestones string) (Cache, error) {
+func InitCache(dataDir string, supportedCapabilities string, cacheSize uint32, instanceMemoryLimit uint32) (Cache, error) {
 	dataDirBytes := []byte(dataDir)
 	supportedCapabilitiesBytes := []byte(supportedCapabilities)
-	milestonesBytes := []byte(milestones)
 
 	d := makeView(dataDirBytes)
 	defer runtime.KeepAlive(dataDirBytes)
 	capabilitiesView := makeView(supportedCapabilitiesBytes)
 	defer runtime.KeepAlive(supportedCapabilitiesBytes)
-
-	milestonesView := makeView(milestonesBytes)
-	defer runtime.KeepAlive(milestonesBytes)
-
 	errmsg := uninitializedUnmanagedVector()
 
-	ptr, err := C.init_cache(d, capabilitiesView, cu32(cacheSize), cu32(instanceMemoryLimit), &errmsg, milestonesView)
+	ptr, err := C.init_cache(d, capabilitiesView, cu32(cacheSize), cu32(instanceMemoryLimit), &errmsg)
 	if err != nil {
 		return Cache{}, errorWithMessage(err, errmsg)
 	}
@@ -62,9 +57,9 @@ func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr)
 }
 
-func SetCurBlockNum(cache Cache, blockNum uint64) error {
+func UpdateCurBlockNum(cache Cache, blockNum uint64) error {
 	errmsg := uninitializedUnmanagedVector()
-	_, err := C.set_cur_block_num(cache.ptr, cu64(blockNum), &errmsg)
+	_, err := C.update_cur_block_num(cache.ptr, cu64(blockNum), &errmsg)
 	if err != nil {
 		return errorWithMessage(err, errmsg)
 	}

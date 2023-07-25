@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::collections::HashSet;
 use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -32,7 +31,6 @@ pub extern "C" fn init_cache(
     cache_size: u32,            // in MiB
     instance_memory_limit: u32, // in MiB
     error_msg: Option<&mut UnmanagedVector>,
-    milestones: ByteSliceView,
 ) -> *mut cache_t {
     let r = catch_unwind(|| {
         do_init_cache(
@@ -40,7 +38,6 @@ pub extern "C" fn init_cache(
             available_capabilities,
             cache_size,
             instance_memory_limit,
-            milestones,
         )
     })
     .unwrap_or_else(|err| {
@@ -55,7 +52,6 @@ fn do_init_cache(
     available_capabilities: ByteSliceView,
     cache_size: u32,            // in MiB
     instance_memory_limit: u32, // in MiB
-    milestones: ByteSliceView,
 ) -> Result<*mut Cache<GoApi, GoStorage, GoQuerier>, Error> {
     let dir = data_dir
         .read()
@@ -76,28 +72,11 @@ fn do_init_cache(
             .try_into()
             .expect("Cannot convert u32 to usize. What kind of system is this?"),
     );
-
-    let milestones_temp = milestones
-        .read()
-        .ok_or_else(|| Error::unset_arg(DATA_DIR_ARG))?;
-    let milestone = String::from_utf8(milestones_temp.to_vec())?;
-
-    // let milestone = "v2:300,v3:400";
-    let mut block_milestone = HashMap::new();
-    for pair in milestone.split(',') {
-        let mut iter = pair.split(':');
-        let key = iter.next().unwrap().to_string();
-        let value = iter.next().unwrap().parse::<u64>().unwrap();
-        block_milestone.insert(key, value);
-    }
-
     let options = CacheOptions {
         base_dir: dir_str.into(),
         available_capabilities: capabilities,
         memory_cache_size,
         instance_memory_limit,
-        block_milestone,
-        cur_block_num: 0,
     };
     let cache = unsafe { Cache::new(options) }?;
     let out = Box::new(cache);
@@ -105,14 +84,14 @@ fn do_init_cache(
 }
 
 #[no_mangle]
-pub extern "C" fn set_cur_block_num(
+pub extern "C" fn update_cur_block_num(
     cache: *mut cache_t,
     cur_block_num: u64,
     error_msg: Option<&mut UnmanagedVector>,
 ) {
     let r = match to_cache(cache) {
         Some(c) => {
-            catch_unwind(AssertUnwindSafe(move || do_set_cur_block_num(c, cur_block_num))).unwrap_or_else(|err| {
+            catch_unwind(AssertUnwindSafe(move || do_update_cur_block_num(c, cur_block_num))).unwrap_or_else(|err| {
                 eprintln!("Panic in do_set_cur_block_num: {:?}", err);
                 Err(Error::panic())
             })
@@ -122,7 +101,7 @@ pub extern "C" fn set_cur_block_num(
     handle_c_error_default(r, error_msg)
 }
 
-fn do_set_cur_block_num(
+fn do_update_cur_block_num(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     cur_block_num: u64,
 ) -> Result<(), Error> {
