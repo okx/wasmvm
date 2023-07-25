@@ -94,13 +94,40 @@ fn do_init_cache(
     let options = CacheOptions {
         base_dir: dir_str.into(),
         available_capabilities: capabilities,
-        block_milestone: block_milestone,
         memory_cache_size,
         instance_memory_limit,
+        block_milestone,
+        cur_block_num: 0,
     };
     let cache = unsafe { Cache::new(options) }?;
     let out = Box::new(cache);
     Ok(Box::into_raw(out))
+}
+
+#[no_mangle]
+pub extern "C" fn set_cur_block_num(
+    cache: *mut cache_t,
+    cur_block_num: u64,
+    error_msg: Option<&mut UnmanagedVector>,
+) {
+    let r = match to_cache(cache) {
+        Some(c) => {
+            catch_unwind(AssertUnwindSafe(move || do_set_cur_block_num(c, cur_block_num))).unwrap_or_else(|err| {
+                eprintln!("Panic in do_set_cur_block_num: {:?}", err);
+                Err(Error::panic())
+            })
+        }
+        None => Err(Error::unset_arg(CACHE_ARG)),
+    };
+    handle_c_error_default(r, error_msg)
+}
+
+fn do_set_cur_block_num(
+    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+    cur_block_num: u64,
+) -> Result<(), Error> {
+    cache.update_cur_block_num(cur_block_num)?;
+    Ok(())
 }
 
 #[no_mangle]
