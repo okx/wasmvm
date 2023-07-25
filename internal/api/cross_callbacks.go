@@ -18,6 +18,10 @@ func GetCallInfo(p unsafe.Pointer, usedGas *cu64, contrAddr C.U8SliceView, store
 	cAddr := copyU8Slice(contrAddr)
 	sAddr := copyU8Slice(storeAddr)
 	api := (*types.GoAPI)(p)
+	if api.GetCallInfo == nil {
+		*errOut = newUnmanagedVector([]byte("the GetCallInfo is nil"))
+		return C.GoError_Other
+	}
 	codeHash, gas, store, querier, gasMeter, err := api.GetCallInfo(string(cAddr), string(sAddr))
 	*usedGas = (cu64)(gas)
 	if err != nil {
@@ -55,6 +59,10 @@ func TransferCoins(p unsafe.Pointer, usedGas *cu64, contrAddr C.U8SliceView, cal
 	ccaller := copyU8Slice(caller)
 	ccoins := copyU8Slice(coins)
 	api := (*types.GoAPI)(p)
+	if api.TransferCoins == nil {
+		*errOut = newUnmanagedVector([]byte("the TransferCoins is nil"))
+		return C.GoError_Other
+	}
 	gas, err := api.TransferCoins(string(cAddr), string(ccaller), ccoins)
 	*usedGas = (cu64)(gas)
 	if err != nil {
