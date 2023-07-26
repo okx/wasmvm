@@ -1,6 +1,5 @@
 #![cfg(test)]
 
-use std::collections::HashMap;
 use tempfile::TempDir;
 
 use cosmwasm_vm::testing::{mock_backend, mock_env, mock_info, mock_instance_with_gas_limit};
@@ -17,13 +16,10 @@ const GAS_LIMIT: u64 = 200_000_000_000; // ~0.2ms
 
 #[test]
 fn handle_cpu_loop_with_cache() {
-    let mut block_milestone = HashMap::new();
-    block_milestone.insert("v2".to_string(), 300 as u64);
     let backend = mock_backend(&[]);
     let options = CacheOptions {
         base_dir: TempDir::new().unwrap().path().to_path_buf(),
         available_capabilities: capabilities_from_csv("staking"),
-        block_milestone: block_milestone,
         memory_cache_size: MEMORY_CACHE_SIZE,
         instance_memory_limit: MEMORY_LIMIT,
     };

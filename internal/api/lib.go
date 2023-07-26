@@ -44,6 +44,7 @@ func InitCache(dataDir string, supportedCapabilities string, cacheSize uint32, i
 	defer runtime.KeepAlive(dataDirBytes)
 	capabilitiesView := makeView(supportedCapabilitiesBytes)
 	defer runtime.KeepAlive(supportedCapabilitiesBytes)
+
 	errmsg := uninitializedUnmanagedVector()
 
 	ptr, err := C.init_cache(d, capabilitiesView, cu32(cacheSize), cu32(instanceMemoryLimit), &errmsg)
