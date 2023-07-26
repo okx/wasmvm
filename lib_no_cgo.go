@@ -5,7 +5,6 @@ package cosmwasm
 import (
 	"github.com/CosmWasm/wasmvm/internal/api"
 	"github.com/CosmWasm/wasmvm/types"
-	"unsafe"
 )
 
 // Checksum represents a hash of the Wasm bytecode that serves as an ID. Must be generated from this library.
@@ -37,14 +36,6 @@ func LibwasmvmVersion() (string, error) {
 	return libwasmvmVersionImpl()
 }
 
-func RegisterGetWasmCallInfo(fnn func(q unsafe.Pointer, contractAddress, storeAddress string) ([]byte, types.KVStore, types.Querier, types.GasMeter, error)) {
-	api.RegisterGetWasmCallInfo(fnn)
-}
-
-func RegisterGetWasmCacheInfo(fnn func() (types.GoAPI, Cache)) {
+func RegisterGetWasmCacheInfo(fnn func() Cache) {
 	api.RegisterGetWasmCacheInfo(fnn)
-}
-
-func RegisterTransferCoins(fnn func(q unsafe.Pointer, contractAddress, caller string, coins []byte) error) {
-	api.RegisterTransferCoins(fnn)
 }
