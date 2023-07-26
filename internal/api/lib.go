@@ -58,6 +58,28 @@ func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr)
 }
 
+func UpdateCurBlockNum(cache Cache, blockNum uint64) error {
+	errmsg := uninitializedUnmanagedVector()
+	_, err := C.update_cur_block_num(cache.ptr, cu64(blockNum), &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
+	}
+	return nil
+}
+
+func UpdateMilestone(cache Cache, milestone string, blockNum uint64) error {
+	milestoneBytes := []byte(milestone)
+	milestoneView := makeView(milestoneBytes)
+	defer runtime.KeepAlive(milestoneBytes)
+
+	errmsg := uninitializedUnmanagedVector()
+	_, err := C.update_milestone(cache.ptr, milestoneView, cu64(blockNum), &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
+	}
+	return nil
+}
+
 func StoreCode(cache Cache, wasm []byte) ([]byte, error) {
 	w := makeView(wasm)
 	defer runtime.KeepAlive(wasm)

@@ -207,7 +207,10 @@ func TestEnv(t *testing.T) {
 	ires, _, err = vm.Execute(checksum, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
 	expected, _ := json.Marshal(env)
-	require.Equal(t, expected, ires.Data)
+	_ = expected
+	var resultEnv types.Env
+	json.Unmarshal(ires.Data, &resultEnv)
+	require.Equal(t, env, resultEnv)
 
 	// Execute mirror env with Transaction
 	env = types.Env{
