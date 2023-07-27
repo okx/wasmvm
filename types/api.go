@@ -13,15 +13,3 @@ type GoAPI struct {
 	GetCallInfo      GetCallInfo
 	TransferCoins    TransferCoins
 }
-
-type ContractCreateRequest struct {
-	Creator   string `json:"creator"`
-	WasmCode  []byte `json:"wasm_code"`
-	CodeID    uint64 `json:"code_id"`
-	InitMsg   []byte `json:"init_msg"`
-	AdminAddr string `json:"admin_addr"`
-	Label     string `json:"label"`
-	IsCreate2 bool   `json:"is_create2"`
-	Salt      []byte `json:"salt"`
-	//Deposit   Coins  `json:"deposit"`
-}
