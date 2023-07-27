@@ -306,6 +306,45 @@ typedef struct api_t {
   uint8_t _private[0];
 } api_t;
 
+typedef struct GoApi_vtable {
+  int32_t (*humanize_address)(const struct api_t*,
+                              struct U8SliceView,
+                              struct UnmanagedVector*,
+                              struct UnmanagedVector*,
+                              uint64_t*);
+  int32_t (*canonicalize_address)(const struct api_t*,
+                                  struct U8SliceView,
+                                  struct UnmanagedVector*,
+                                  struct UnmanagedVector*,
+                                  uint64_t*);
+  int32_t (*contract_external)(const struct api_t*,
+                               uint64_t, uint64_t*,
+                               struct U8SliceView,
+                               struct UnmanagedVector*,
+                               struct UnmanagedVector*);
+  int32_t (*get_call_info)(const struct api_t*, uint64_t*,
+                           struct U8SliceView,
+                           struct U8SliceView,
+                           struct UnmanagedVector*,
+                           struct Db**,
+                           struct GoQuerier**,
+                           uint64_t*,
+                           struct UnmanagedVector*);
+  int32_t (*get_wasm_info)(struct cache_t**,
+                           struct UnmanagedVector*);
+  int32_t (*release)(uint64_t);
+  int32_t (*transfer_coins)(const struct api_t*, uint64_t*,
+                            struct U8SliceView,
+                            struct U8SliceView,
+                            struct U8SliceView,
+                            struct UnmanagedVector*);
+} GoApi_vtable;
+
+typedef struct GoApi {
+  const struct api_t *state;
+  struct GoApi_vtable vtable;
+} GoApi;
+
 typedef struct querier_t {
   uint8_t _private[0];
 } querier_t;
@@ -323,21 +362,6 @@ typedef struct GoQuerier {
   const struct querier_t *state;
   struct Querier_vtable vtable;
 } GoQuerier;
-
-typedef struct GoApi_vtable {
-  int32_t (*humanize_address)(const struct api_t*, struct U8SliceView, struct UnmanagedVector*, struct UnmanagedVector*, uint64_t*);
-  int32_t (*canonicalize_address)(const struct api_t*, struct U8SliceView, struct UnmanagedVector*, struct UnmanagedVector*, uint64_t*);
-  int32_t (*contract_external)(const struct api_t*, uint64_t, uint64_t*, struct U8SliceView, struct UnmanagedVector*, struct UnmanagedVector*);
-  int32_t (*get_call_info)(const struct api_t*, uint64_t*, struct U8SliceView, struct U8SliceView, struct UnmanagedVector*, struct Db**, struct GoQuerier**, uint64_t*, struct UnmanagedVector*);
-  int32_t (*get_wasm_info)(struct cache_t**, struct UnmanagedVector*);
-  int32_t (*release)(uint64_t);
-  int32_t (*transfer_coins)(const struct api_t*, uint64_t*, struct U8SliceView, struct U8SliceView, struct U8SliceView, struct UnmanagedVector*);
-} GoApi_vtable;
-
-typedef struct GoApi {
-  const struct api_t *state;
-  struct GoApi_vtable vtable;
-} GoApi;
 
 struct cache_t *init_cache(struct ByteSliceView data_dir,
                            struct ByteSliceView available_capabilities,
