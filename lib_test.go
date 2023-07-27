@@ -206,8 +206,10 @@ func TestEnv(t *testing.T) {
 	msg := []byte(`{"mirror_env": {}}`)
 	ires, _, err = vm.Execute(checksum, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
-	expected, _ := json.Marshal(env)
-	require.Equal(t, expected, ires.Data)
+	var resultEnv types.Env
+	err = json.Unmarshal(ires.Data, &resultEnv)
+	require.NoError(t, err)
+	require.Equal(t, env, resultEnv)
 
 	// Execute mirror env with Transaction
 	env = types.Env{
@@ -227,8 +229,11 @@ func TestEnv(t *testing.T) {
 	msg = []byte(`{"mirror_env": {}}`)
 	ires, _, err = vm.Execute(checksum, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
-	expected, _ = json.Marshal(env)
+	expected, _ := json.Marshal(env)
 	require.Equal(t, expected, ires.Data)
+	err = json.Unmarshal(ires.Data, &resultEnv)
+	require.NoError(t, err)
+	require.Equal(t, env, resultEnv)
 }
 
 func TestGetMetrics(t *testing.T) {
