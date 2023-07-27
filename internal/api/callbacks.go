@@ -417,7 +417,7 @@ func cContractExternal(ptr *C.api_t, gasLimit cu64, usedGas *cu64, request C.U8S
 		return C.GoError_User
 	}
 	if len(bz) == 0 {
-		panic(fmt.Sprintf("`api.ContractExternal()` returned an empty string for %q", req))
+		panic(fmt.Sprintf("`api.ContractExternal()` returned an empty string for %q", string(binRequest)))
 	}
 	*result = newUnmanagedVector([]byte(bz))
 	return C.GoError_None
