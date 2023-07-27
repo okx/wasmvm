@@ -352,6 +352,12 @@ typedef struct GoApi_vtable {
                             struct U8SliceView,
                             struct U8SliceView,
                             struct UnmanagedVector*);
+  int32_t (*contract_external)(const struct api_t*,
+                               uint64_t,
+                               uint64_t*,
+                               struct U8SliceView,
+                               struct UnmanagedVector*,
+                               struct UnmanagedVector*);
 } GoApi_vtable;
 
 typedef struct GoApi {

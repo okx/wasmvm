@@ -18,6 +18,7 @@ GoError cGetCallInfo(api_t *ptr, uint64_t *used_gas, U8SliceView contractAddress
 GoError cGetWasmInfo(cache_t **resCache_t, UnmanagedVector *errOut);
 GoError cRelease(uint64_t call_id);
 GoError cTransferCoins(api_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView caller, U8SliceView coins, UnmanagedVector *errOut);
+GoError cContractExternal(api_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 // imports (querier)
 GoError cQueryExternal(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 
@@ -46,6 +47,9 @@ GoError cCanonicalAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest
 }
 GoError cHumanAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas) {
     return cHumanAddress(ptr, src, dest, errOut, used_gas);
+}
+GoError cContractExternal_cgo(api_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut) {
+    return cContractExternal(ptr, gas_limit, used_gas, request, result, errOut);
 }
 
 GoError cGetCallInfo_cgo(api_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, uint64_t *call_id, UnmanagedVector *errOut) {

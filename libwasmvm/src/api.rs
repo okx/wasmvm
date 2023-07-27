@@ -61,6 +61,13 @@ pub struct GoApi_vtable {
         U8SliceView,    // coins
         *mut UnmanagedVector, // error message output
     ) -> i32,
+    pub contract_external: extern "C" fn(
+        *const api_t,
+        u64,
+        *mut u64,
+        U8SliceView,
+        *mut UnmanagedVector, // result output
+    ) -> i32,
 }
 
 #[repr(C)]
@@ -338,6 +345,42 @@ impl BackendApi for GoApi {
         (self.vtable.release)(call_id);
 
         (result, ret_gas_uesd)
+    }
+
+    fn new_contract(
+        &self,
+        request: &[u8],
+        gas_limit: u64,
+    ) -> BackendResult<String> {
+        let mut output = UnmanagedVector::default();
+        let mut error_msg = UnmanagedVector::default();
+        let mut used_gas = 0_u64;
+        let go_error: GoError = (self.vtable.contract_external)(
+            self.state,
+            gas_limit,
+            &mut used_gas as *mut u64,
+            U8SliceView::new(Some(request)),
+            &mut output as *mut UnmanagedVector,
+            &mut error_msg as *mut UnmanagedVector,
+        )
+            .into();
+        // We destruct the UnmanagedVector here, no matter if we need the data.
+        let output = output.consume();
+
+        let gas_info = GasInfo::with_externally_used(used_gas);
+
+        // return complete error message (reading from buffer for GoError::Other)
+        let default = || format!("Failed to new contract: {}", String::from_utf8_lossy(request));
+        unsafe {
+            if let Err(err) = go_error.into_result(error_msg, default) {
+                return (Err(err), gas_info);
+            }
+        }
+
+        let result = output
+            .ok_or_else(|| BackendError::unknown("Unset output"))
+            .and_then(|addr_data| String::from_utf8(addr_data).map_err(BackendError::from));
+        (result, gas_info)
     }
 }
 
