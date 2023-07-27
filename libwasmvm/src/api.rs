@@ -1,7 +1,13 @@
-use cosmwasm_vm::{BackendApi, BackendError, BackendResult, GasInfo};
+use cosmwasm_vm::{BackendApi, BackendError, BackendResult, GasInfo, Querier, Storage, VmError};
 
 use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
+
+use cosmwasm_vm::{call_execute_raw, Backend, Cache, Checksum, Environment};
+use cosmwasm_vm::{VmResult, InstanceOptions, InternalCallParam};
+use cosmwasm_std::{MessageInfo, to_vec, Env, Addr};
+use crate::db::{Db};
+use crate::{cache_t, GoQuerier, GoStorage};
 
 // this represents something passed in from the caller side of FFI
 // in this case a struct with go function pointers
@@ -28,6 +34,32 @@ pub struct GoApi_vtable {
         *mut UnmanagedVector, // canonical output
         *mut UnmanagedVector, // error message output
         *mut u64,
+    ) -> i32,
+    pub get_call_info: extern "C" fn (
+        *const api_t,
+        *mut u64,       // used gas
+        U8SliceView,    // contract address
+        U8SliceView,    // store address
+        *mut UnmanagedVector,
+        *mut *mut Db,
+        *mut *mut GoQuerier,
+        *mut u64,             // the callID
+        *mut UnmanagedVector, // error message output
+    ) -> i32,
+    pub get_wasm_info: extern "C" fn (
+        *mut *mut cache_t,
+        *mut UnmanagedVector, // error message output
+    ) -> i32,
+    pub release: extern "C" fn (
+        u64,                  // callID
+    ) -> i32,
+    pub transfer_coins: extern "C" fn (
+        *const api_t,
+        *mut u64,       // used gas
+        U8SliceView,    // contract address
+        U8SliceView,    // caller
+        U8SliceView,    // coins
+        *mut UnmanagedVector, // error message output
     ) -> i32,
 }
 
@@ -109,5 +141,248 @@ impl BackendApi for GoApi {
             .ok_or_else(|| BackendError::unknown("Unset output"))
             .and_then(|human_data| String::from_utf8(human_data).map_err(BackendError::from));
         (result, gas_info)
+    }
+
+    fn call<A: BackendApi, S: Storage, Q: Querier>(&self, env1: &Environment<A, S, Q>,
+                                                   contract_address: String,
+                                                   info: &MessageInfo,
+                                                   call_msg: &[u8],
+                                                   block_env: &Env,
+                                                   gas_limit: u64
+    ) -> (VmResult<Vec<u8>>, GasInfo) {
+        let mut tc_used_gas = 0_u64;
+        // need check transfer
+        if info.funds.len() != 0 {
+            let mut error_msg = UnmanagedVector::default();
+            let coins = to_vec(&info.funds).unwrap();
+            let go_result: GoError = (self.vtable.transfer_coins)(
+                self.state,
+                &mut tc_used_gas as *mut u64,
+                U8SliceView::new(Some(contract_address.as_bytes())),
+                U8SliceView::new(Some(info.sender.clone().as_bytes())),
+                U8SliceView::new(Some(coins.as_slice())),
+                &mut error_msg as *mut UnmanagedVector,
+            ).into();
+            let default = || {
+                format!(
+                    "Call failed to transferCoins contract address: {}",
+                    contract_address
+                )
+            };
+            unsafe {
+                if let Err(err) = go_result.into_result(error_msg, default) {
+                    return (Err(VmError::BackendErr { source: err }), GasInfo::with_externally_used(tc_used_gas));
+                }
+            }
+        }
+
+        let mut res_code_hash = UnmanagedVector::default();
+        let mut res_store: *mut Db = std::ptr::null_mut();
+        let mut res_querier: *mut GoQuerier = std::ptr::null_mut();
+        let mut error_msg = UnmanagedVector::default();
+        let mut gci_used_gas = 0_u64;
+        let mut call_id = 0_u64;
+
+        let go_result: GoError = (self.vtable.get_call_info)(
+            self.state,
+            &mut gci_used_gas as *mut u64,
+            U8SliceView::new(Some(contract_address.as_bytes())),
+            U8SliceView::new(Some(contract_address.as_bytes())),
+            &mut res_code_hash as *mut UnmanagedVector,
+            &mut res_store,
+            &mut res_querier,
+            &mut call_id as *mut u64,
+            &mut error_msg as *mut UnmanagedVector,
+        ).into();
+
+        let mut ret_gas_uesd = GasInfo::with_externally_used(gci_used_gas+tc_used_gas);
+
+        let default = || {
+            format!(
+                "Call failed to get_call_info contract address: {}",
+                contract_address
+            )
+        };
+        unsafe {
+            if let Err(err) = go_result.into_result(error_msg, default) {
+                return (Err(VmError::BackendErr { source: err }), ret_gas_uesd);
+            }
+        }
+
+        if res_store.is_null() || res_querier.is_null() || res_code_hash.is_none(){
+            return (Err(VmError::BackendErr {source: BackendError::unknown("res_store, res_querier or res_code_hash is null")}), ret_gas_uesd);
+        }
+
+        // We destruct the UnmanagedVector here, no matter if we need the data.
+        let res_code_hash = res_code_hash.consume();
+        let bin_res_code_hash: Vec<u8> = res_code_hash.unwrap_or_default();
+        let mut byte_array: [u8; 32] = [0; 32];
+        byte_array.copy_from_slice(&bin_res_code_hash[..32]);
+
+        let querier = unsafe{(*res_querier).clone()};
+        let storage = GoStorage::new(unsafe{(*res_store).clone()});
+
+        let mut res_cache: *mut cache_t = std::ptr::null_mut();
+        let mut error_msg = UnmanagedVector::default();
+
+        let go_result: GoError = (self.vtable.get_wasm_info)(
+            &mut res_cache,
+            &mut error_msg as *mut UnmanagedVector,
+        ).into();
+
+        let default = || {
+            format!(
+                "Call failed to get_wasm_info contract address: {}",
+                contract_address
+            )
+        };
+        unsafe {
+            if let Err(err) = go_result.into_result(error_msg, default) {
+                return (Err(VmError::BackendErr { source: err }), ret_gas_uesd);
+            }
+        }
+        if res_cache.is_null() {
+            return (Err(VmError::BackendErr { source: BackendError::unknown("res_api or res_cache is null") }), ret_gas_uesd);
+        }
+
+        let api = self.clone();
+        let (result, gas_info) = do_call(env1, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit, Addr::unchecked(contract_address.clone()));
+
+        ret_gas_uesd += gas_info;
+        (self.vtable.release)(call_id);
+
+        (result, ret_gas_uesd)
+    }
+
+    fn delegate_call<A: BackendApi, S: Storage, Q: Querier>(&self, env: &Environment<A, S, Q>,
+                                                            contract_address: String,
+                                                            info: &MessageInfo,
+                                                            call_msg: &[u8],
+                                                            block_env: &Env,
+                                                            gas_limit: u64
+    ) -> (VmResult<Vec<u8>>, GasInfo) {
+        let mut res_code_hash = UnmanagedVector::default();
+        let mut res_store: *mut Db = std::ptr::null_mut();
+        let mut res_querier: *mut GoQuerier = std::ptr::null_mut();
+        let mut error_msg = UnmanagedVector::default();
+        let mut gci_used_gas = 0_u64;
+        let mut call_id = 0_u64;
+
+        let go_result: GoError = (self.vtable.get_call_info)(
+            self.state,
+            &mut gci_used_gas as *mut u64,
+            U8SliceView::new(Some(contract_address.as_bytes())),
+            U8SliceView::new(Some(env.delegate_contract_addr.clone().as_bytes())),
+            &mut res_code_hash as *mut UnmanagedVector,
+            &mut res_store,
+            &mut res_querier,
+            &mut call_id as *mut u64,
+            &mut error_msg as *mut UnmanagedVector,
+        ).into();
+
+        let mut ret_gas_uesd = GasInfo::with_externally_used(gci_used_gas);
+
+        let default = || {
+            format!(
+                "Delegate call failed to get_call_info contract address: {} store address: {}",
+                contract_address,
+                env.delegate_contract_addr.clone().into_string()
+            )
+        };
+        unsafe {
+            if let Err(err) = go_result.into_result(error_msg, default) {
+                return (Err(VmError::BackendErr { source: err }), ret_gas_uesd);
+            }
+        }
+
+        if res_store.is_null() || res_querier.is_null() || res_code_hash.is_none(){
+            return (Err(VmError::BackendErr {source: BackendError::unknown("res_store, res_querier or res_code_hash is null")}), ret_gas_uesd);
+        }
+
+        let res_code_hash = res_code_hash.consume();
+        let bin_res_code_hash: Vec<u8> = res_code_hash.unwrap_or_default();
+        let mut byte_array: [u8; 32] = [0; 32];
+        byte_array.copy_from_slice(&bin_res_code_hash[..32]);
+
+        let querier = unsafe{(*res_querier).clone()};
+        let storage = GoStorage::new(unsafe{(*res_store).clone()});
+
+        let mut res_cache: *mut cache_t = std::ptr::null_mut();
+        let mut error_msg = UnmanagedVector::default();
+        let go_result: GoError = (self.vtable.get_wasm_info)(
+            &mut res_cache,
+            &mut error_msg as *mut UnmanagedVector,
+        ).into();
+
+        let default = || {
+            format!(
+                "Delegate call failed to get_wasm_info contract address: {} store address: {}",
+                contract_address,
+                env.delegate_contract_addr.clone().into_string()
+            )
+        };
+        unsafe {
+            if let Err(err) = go_result.into_result(error_msg, default) {
+                return (Err(VmError::BackendErr { source: err }), ret_gas_uesd);
+            }
+        }
+        if res_cache.is_null() {
+            return (Err(VmError::BackendErr { source: BackendError::unknown("res_api or res_cache is null") }), ret_gas_uesd);
+        }
+
+        let api = self.clone();
+
+        let (result, gas_info) = do_call(env, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit, env.delegate_contract_addr.clone());
+
+        ret_gas_uesd += gas_info;
+        (self.vtable.release)(call_id);
+
+        (result, ret_gas_uesd)
+    }
+}
+
+pub fn do_call<A: BackendApi, S: Storage, Q: Querier>(
+    env: &Environment<A, S, Q>,
+    benv: &Env,
+    storage: GoStorage,
+    querier: GoQuerier,
+    api: GoApi,
+    cache: *mut cache_t,
+    info: &MessageInfo,
+    call_msg: &[u8],
+    checksum: [u8; 32],
+    gas_limit: u64,
+    delegate_contract_addr: Addr,
+) -> (VmResult<Vec<u8>>, GasInfo) {
+    let backend = Backend {
+        api: api,
+        storage: storage,
+        querier: querier
+    };
+
+    let ins_options = InstanceOptions{
+        gas_limit: gas_limit,
+        print_debug: env.print_debug,
+    };
+
+    let cache = unsafe { &mut *(cache as *mut Cache<GoApi, GoStorage, GoQuerier>) };
+    let param = InternalCallParam {
+        call_depth: env.call_depth + 1,
+        sender_addr: info.sender.clone(),
+        delegate_contract_addr: delegate_contract_addr
+    };
+    let new_instance = cache.get_instance_ex(&Checksum::from(checksum), backend, ins_options, param);
+    match new_instance {
+        Ok(mut ins) => {
+            let benv = to_vec(benv).unwrap();
+            let info = to_vec(info).unwrap();
+            let result = call_execute_raw(&mut ins, &benv, &info, call_msg);
+            let gas_rep = ins.create_gas_report();
+            ins.recycle();
+            (result, GasInfo::new(gas_rep.used_internally, gas_rep.used_externally))
+        }
+        Err(err) => {
+            (Err(err), GasInfo::with_cost(0))
+        }
     }
 }
