@@ -5,8 +5,9 @@ use cosmwasm_std::{Addr, Env, MessageInfo};
 use tempfile::TempDir;
 
 use cosmwasm_vm::testing::{mock_backend, mock_env, mock_info, mock_instance_with_gas_limit};
-use cosmwasm_vm::{call_execute_raw, call_instantiate_raw, capabilities_from_csv, to_vec, Cache, CacheOptions, InstanceOptions, Size,
-                  Checksum, Storage, BackendApi, Querier, GasInfo, VmResult, InternalCallParam, Backend};
+use cosmwasm_vm::{
+    call_execute_raw, call_instantiate_raw, capabilities_from_csv, to_vec, Cache, CacheOptions,
+    InstanceOptions, Size, Checksum, Storage, BackendApi, Querier, GasInfo, VmResult, InternalCallParam, Backend};
 
 static CYBERPUNK: &[u8] = include_bytes!("../../testdata/cyberpunk.wasm");
 const PRINT_DEBUG: bool = false;

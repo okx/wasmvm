@@ -67,6 +67,7 @@ pub struct GoApi_vtable {
         *mut u64,
         U8SliceView,
         *mut UnmanagedVector, // result output
+        *mut UnmanagedVector, // error message output
     ) -> i32,
 }
 

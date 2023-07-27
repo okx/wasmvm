@@ -356,6 +356,7 @@ typedef struct GoApi_vtable {
                                uint64_t,
                                uint64_t*,
                                struct U8SliceView,
+                               struct UnmanagedVector*,
                                struct UnmanagedVector*);
 } GoApi_vtable;
 
