@@ -365,7 +365,6 @@ typedef struct GoQuerier {
   struct Querier_vtable vtable;
 } GoQuerier;
 
-
 struct cache_t *init_cache(struct ByteSliceView data_dir,
                            struct ByteSliceView available_capabilities,
                            uint32_t cache_size,
