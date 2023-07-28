@@ -156,7 +156,11 @@ impl BackendApi for GoApi {
                                                    info: &MessageInfo,
                                                    call_msg: &[u8],
                                                    block_env: &Env,
-                                                   gas_limit: u64
+                                                   gas_limit: u64,
+                                                   write_cost_flat: u64,
+                                                   write_cost_per_byte: u64,
+                                                   delete_cost:u64,
+                                                   gas_mul: u64,
     ) -> (VmResult<Vec<u8>>, GasInfo) {
         let mut tc_used_gas = 0_u64;
         // need check transfer
@@ -254,7 +258,8 @@ impl BackendApi for GoApi {
         }
 
         let api = self.clone();
-        let (result, gas_info) = do_call(env1, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit, Addr::unchecked(contract_address.clone()));
+        let (result, gas_info) = do_call(env1, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit, Addr::unchecked(contract_address.clone()),
+                                         write_cost_flat, write_cost_per_byte, delete_cost, gas_mul);
 
         ret_gas_uesd += gas_info;
         (self.vtable.release)(call_id);
@@ -267,7 +272,11 @@ impl BackendApi for GoApi {
                                                             info: &MessageInfo,
                                                             call_msg: &[u8],
                                                             block_env: &Env,
-                                                            gas_limit: u64
+                                                            gas_limit: u64,
+                                                            write_cost_flat: u64,
+                                                            write_cost_per_byte: u64,
+                                                            delete_cost:u64,
+                                                            gas_mul: u64,
     ) -> (VmResult<Vec<u8>>, GasInfo) {
         let mut res_code_hash = UnmanagedVector::default();
         let mut res_store: *mut Db = std::ptr::null_mut();
@@ -340,7 +349,8 @@ impl BackendApi for GoApi {
 
         let api = self.clone();
 
-        let (result, gas_info) = do_call(env, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit, env.delegate_contract_addr.clone());
+        let (result, gas_info) = do_call(env, block_env, storage, querier, api, res_cache, info, call_msg, byte_array, gas_limit, env.delegate_contract_addr.clone(),
+                                         write_cost_flat, write_cost_per_byte, delete_cost, gas_mul);
 
         ret_gas_uesd += gas_info;
         (self.vtable.release)(call_id);
@@ -397,6 +407,10 @@ pub fn do_call<A: BackendApi, S: Storage, Q: Querier>(
     checksum: [u8; 32],
     gas_limit: u64,
     delegate_contract_addr: Addr,
+    write_cost_flat: u64,
+    write_cost_per_byte: u64,
+    delete_cost:u64,
+    gas_mul: u64,
 ) -> (VmResult<Vec<u8>>, GasInfo) {
     let backend = Backend {
         api: api,
@@ -407,6 +421,10 @@ pub fn do_call<A: BackendApi, S: Storage, Q: Querier>(
     let ins_options = InstanceOptions{
         gas_limit: gas_limit,
         print_debug: env.print_debug,
+        write_cost_flat,
+        write_cost_per_byte,
+        delete_cost,
+        gas_mul,
     };
 
     let cache = unsafe { &mut *(cache as *mut Cache<GoApi, GoStorage, GoQuerier>) };
