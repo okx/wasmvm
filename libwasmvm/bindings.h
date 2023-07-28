@@ -306,6 +306,24 @@ typedef struct api_t {
   uint8_t _private[0];
 } api_t;
 
+typedef struct querier_t {
+  uint8_t _private[0];
+} querier_t;
+
+typedef struct Querier_vtable {
+  int32_t (*query_external)(const struct querier_t*,
+                            uint64_t,
+                            uint64_t*,
+                            struct U8SliceView,
+                            struct UnmanagedVector*,
+                            struct UnmanagedVector*);
+} Querier_vtable;
+
+typedef struct GoQuerier {
+  const struct querier_t *state;
+  struct Querier_vtable vtable;
+} GoQuerier;
+
 typedef struct GoApi_vtable {
   int32_t (*humanize_address)(const struct api_t*,
                               struct U8SliceView,
@@ -346,24 +364,6 @@ typedef struct GoApi {
   const struct api_t *state;
   struct GoApi_vtable vtable;
 } GoApi;
-
-typedef struct querier_t {
-  uint8_t _private[0];
-} querier_t;
-
-typedef struct Querier_vtable {
-  int32_t (*query_external)(const struct querier_t*,
-                            uint64_t,
-                            uint64_t*,
-                            struct U8SliceView,
-                            struct UnmanagedVector*,
-                            struct UnmanagedVector*);
-} Querier_vtable;
-
-typedef struct GoQuerier {
-  const struct querier_t *state;
-  struct Querier_vtable vtable;
-} GoQuerier;
 
 struct cache_t *init_cache(struct ByteSliceView data_dir,
                            struct ByteSliceView available_capabilities,
@@ -424,7 +424,11 @@ struct UnmanagedVector instantiate(struct cache_t *cache,
                                    uint64_t gas_limit,
                                    bool print_debug,
                                    uint64_t *gas_used,
-                                   struct UnmanagedVector *error_msg);
+                                   struct UnmanagedVector *error_msg,
+                                   uint64_t write_cost_flat,
+                                   uint64_t write_cost_per_byte,
+                                   uint64_t delete_cost,
+                                   uint64_t gas_mul);
 
 struct UnmanagedVector execute(struct cache_t *cache,
                                struct ByteSliceView checksum,
@@ -437,7 +441,11 @@ struct UnmanagedVector execute(struct cache_t *cache,
                                uint64_t gas_limit,
                                bool print_debug,
                                uint64_t *gas_used,
-                               struct UnmanagedVector *error_msg);
+                               struct UnmanagedVector *error_msg,
+                               uint64_t write_cost_flat,
+                               uint64_t write_cost_per_byte,
+                               uint64_t delete_cost,
+                               uint64_t gas_mul);
 
 struct UnmanagedVector migrate(struct cache_t *cache,
                                struct ByteSliceView checksum,

@@ -156,7 +156,7 @@ impl BackendApi for GoApi {
                                                    info: &MessageInfo,
                                                    call_msg: &[u8],
                                                    block_env: &Env,
-                                                   gas_limit: u64
+                                                   gas_limit: u64,
     ) -> (VmResult<Vec<u8>>, GasInfo) {
         let mut tc_used_gas = 0_u64;
         // need check transfer
@@ -267,7 +267,7 @@ impl BackendApi for GoApi {
                                                             info: &MessageInfo,
                                                             call_msg: &[u8],
                                                             block_env: &Env,
-                                                            gas_limit: u64
+                                                            gas_limit: u64,
     ) -> (VmResult<Vec<u8>>, GasInfo) {
         let mut res_code_hash = UnmanagedVector::default();
         let mut res_store: *mut Db = std::ptr::null_mut();
@@ -407,6 +407,10 @@ pub fn do_call<A: BackendApi, S: Storage, Q: Querier>(
     let ins_options = InstanceOptions{
         gas_limit: gas_limit,
         print_debug: env.print_debug,
+        write_cost_flat: env.gas_config_info.write_cost_flat,
+        write_cost_per_byte: env.gas_config_info.write_cost_per_byte,
+        delete_cost: env.gas_config_info.delete_cost,
+        gas_mul: env.gas_config_info.gas_mul,
     };
 
     let cache = unsafe { &mut *(cache as *mut Cache<GoApi, GoStorage, GoQuerier>) };
