@@ -1,19 +1,26 @@
 #![cfg(test)]
 
-use std::env;
 use cosmwasm_std::{Addr, Env, MessageInfo};
+use std::env;
 use tempfile::TempDir;
 
 use cosmwasm_vm::testing::{mock_backend, mock_env, mock_info, mock_instance_with_gas_limit};
 use cosmwasm_vm::{
-    call_execute_raw, call_instantiate_raw, capabilities_from_csv, to_vec, Cache, CacheOptions,
-    InstanceOptions, Size, Checksum, Storage, BackendApi, Querier, GasInfo, VmResult, InternalCallParam, Backend};
+    call_execute_raw, call_instantiate_raw, capabilities_from_csv, to_vec, Backend, BackendApi,
+    Cache, CacheOptions, Checksum, GasInfo, InstanceOptions, InternalCallParam, Querier, Size,
+    Storage, VmResult,
+};
 
 static CYBERPUNK: &[u8] = include_bytes!("../../testdata/cyberpunk.wasm");
 const PRINT_DEBUG: bool = false;
 const MEMORY_CACHE_SIZE: Size = Size::mebi(200);
 const MEMORY_LIMIT: Size = Size::mebi(32);
 const GAS_LIMIT: u64 = 200_000_000_000; // ~0.2ms
+
+const DEFAULT_WRITE_COST_FLAT: u64 = 2000;
+const DEFAULT_WRITE_COST_PER_BYTE: u64 = 30;
+const DEFAULT_DELETE_COST: u64 = 1000;
+const DEFAULT_GAS_MULTIPLIER: u64 = 38000000;
 
 #[test]
 fn handle_cpu_loop_with_cache() {
@@ -29,6 +36,10 @@ fn handle_cpu_loop_with_cache() {
     let options = InstanceOptions {
         gas_limit: GAS_LIMIT,
         print_debug: PRINT_DEBUG,
+        write_cost_flat: DEFAULT_WRITE_COST_FLAT,
+        write_cost_per_byte: DEFAULT_WRITE_COST_PER_BYTE,
+        delete_cost: DEFAULT_DELETE_COST,
+        gas_mul: DEFAULT_GAS_MULTIPLIER,
     };
 
     // store code
@@ -100,6 +111,10 @@ fn handle_do_call() {
     let options = InstanceOptions {
         gas_limit: GAS_LIMIT,
         print_debug: PRINT_DEBUG,
+        write_cost_flat: DEFAULT_WRITE_COST_FLAT,
+        write_cost_per_byte: DEFAULT_WRITE_COST_PER_BYTE,
+        delete_cost: DEFAULT_DELETE_COST,
+        gas_mul: DEFAULT_GAS_MULTIPLIER,
     };
 
     // store code
@@ -120,13 +135,23 @@ fn handle_do_call() {
 
     // execute
     let raw_msg = br#"{"cpu_loop":{}}"#;
-    let data  = Vec::from(checksum);
+    let data = Vec::from(checksum);
     let mut byte_array: [u8; 32] = [0; 32];
     byte_array.copy_from_slice(&data[..32]);
 
-
-    let (res, gas_info) = mock_do_call(&env, backend, &cache , &info, raw_msg, byte_array,
-             options.gas_limit, options.print_debug, 1, cosmwasm_std::Addr::unchecked(""), cosmwasm_std::Addr::unchecked(""));
+    let (res, gas_info) = mock_do_call(
+        &env,
+        backend,
+        &cache,
+        &info,
+        raw_msg,
+        byte_array,
+        options.gas_limit,
+        options.print_debug,
+        1,
+        cosmwasm_std::Addr::unchecked(""),
+        cosmwasm_std::Addr::unchecked(""),
+    );
     assert!(res.is_err());
     println!("the gas_info is {:?}", gas_info);
 }
@@ -144,17 +169,22 @@ pub fn mock_do_call<A: BackendApi + 'static, S: Storage + 'static, Q: Querier + 
     sender_addr: Addr,
     delegate_contract_addr: Addr,
 ) -> (VmResult<Vec<u8>>, GasInfo) {
-    let ins_options = InstanceOptions{
+    let ins_options = InstanceOptions {
         gas_limit: gas_limit,
         print_debug: print_debug,
+        write_cost_flat: DEFAULT_WRITE_COST_FLAT,
+        write_cost_per_byte: DEFAULT_WRITE_COST_PER_BYTE,
+        delete_cost: DEFAULT_DELETE_COST,
+        gas_mul: DEFAULT_GAS_MULTIPLIER,
     };
 
     let param = InternalCallParam {
         call_depth: call_depth + 1,
         sender_addr: sender_addr,
-        delegate_contract_addr: delegate_contract_addr
+        delegate_contract_addr: delegate_contract_addr,
     };
-    let new_instance = cache.get_instance_ex(&Checksum::from(checksum), backend, ins_options, param);
+    let new_instance =
+        cache.get_instance_ex(&Checksum::from(checksum), backend, ins_options, param);
     match new_instance {
         Ok(mut ins) => {
             let benv = to_vec(benv).unwrap();
@@ -162,11 +192,9 @@ pub fn mock_do_call<A: BackendApi + 'static, S: Storage + 'static, Q: Querier + 
             let result = call_execute_raw(&mut ins, &benv, &info, call_msg);
             let gas_used = gas_limit - ins.get_gas_left();
             let gas_externally_used = ins.get_externally_used_gas();
-            let gas_cost       = gas_used - gas_externally_used;
+            let gas_cost = gas_used - gas_externally_used;
             (result, GasInfo::new(gas_cost, gas_externally_used))
         }
-        Err(err) => {
-            (Err(err), GasInfo::with_cost(0))
-        }
+        Err(err) => (Err(err), GasInfo::with_cost(0)),
     }
 }
