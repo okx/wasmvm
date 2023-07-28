@@ -348,21 +348,21 @@ typedef struct GoApi {
 } GoApi;
 
 typedef struct querier_t {
-    uint8_t _private[0];
+  uint8_t _private[0];
 } querier_t;
 
 typedef struct Querier_vtable {
-    int32_t (*query_external)(const struct querier_t*,
-                              uint64_t,
-                              uint64_t*,
-                              struct U8SliceView,
-                              struct UnmanagedVector*,
-                              struct UnmanagedVector*);
+  int32_t (*query_external)(const struct querier_t*,
+                            uint64_t,
+                            uint64_t*,
+                            struct U8SliceView,
+                            struct UnmanagedVector*,
+                            struct UnmanagedVector*);
 } Querier_vtable;
 
 typedef struct GoQuerier {
-    const struct querier_t *state;
-    struct Querier_vtable vtable;
+  const struct querier_t *state;
+  struct Querier_vtable vtable;
 } GoQuerier;
 
 struct cache_t *init_cache(struct ByteSliceView data_dir,
