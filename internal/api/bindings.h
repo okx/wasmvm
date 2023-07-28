@@ -317,6 +317,23 @@ typedef struct GoApi_vtable {
                                   struct UnmanagedVector*,
                                   struct UnmanagedVector*,
                                   uint64_t*);
+  int32_t (*get_call_info)(const struct api_t*,
+                           uint64_t*,
+                           struct U8SliceView,
+                           struct U8SliceView,
+                           struct UnmanagedVector*,
+                           struct Db**,
+                           struct GoQuerier**,
+                           uint64_t*,
+                           struct UnmanagedVector*);
+  int32_t (*get_wasm_info)(struct cache_t**, struct UnmanagedVector*);
+  int32_t (*release)(uint64_t);
+  int32_t (*transfer_coins)(const struct api_t*,
+                            uint64_t*,
+                            struct U8SliceView,
+                            struct U8SliceView,
+                            struct U8SliceView,
+                            struct UnmanagedVector*);
   int32_t (*contract_external)(const struct api_t*,
                                uint64_t,
                                uint64_t*,

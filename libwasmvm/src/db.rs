@@ -11,6 +11,7 @@ pub struct db_t {
 // These functions should return GoError but because we don't trust them here, we treat the return value as i32
 // and then check it when converting to GoError manually
 #[repr(C)]
+#[derive(Clone)]
 pub struct Db_vtable {
     pub read_db: extern "C" fn(
         *mut db_t,
@@ -51,6 +52,7 @@ pub struct Db_vtable {
 }
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct Db {
     pub gas_meter: *mut gas_meter_t,
     pub state: *mut db_t,

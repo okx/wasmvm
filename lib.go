@@ -49,6 +49,10 @@ func (vm *VM) UpdateMilestone(milestone string, blockNum uint64) error {
 	return api.UpdateMilestone(vm.cache, milestone, blockNum)
 }
 
+func (vm *VM) GetCache() api.Cache {
+	return vm.cache
+}
+
 // Deprecated: Renamed to StoreCode
 func (vm *VM) Create(code WasmCode) (Checksum, error) {
 	return vm.StoreCode(code)
