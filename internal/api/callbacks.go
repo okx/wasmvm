@@ -16,6 +16,7 @@ typedef GoError (*next_db_fn)(iterator_t idx, gas_meter_t *gas_meter, uint64_t *
 // and api
 typedef GoError (*humanize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 typedef GoError (*canonicalize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
+typedef GoError (*contract_external_fn)(api_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 typedef GoError (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 
 // forward declarations (db)
@@ -28,6 +29,7 @@ GoError cNext_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U
 // api
 GoError cHumanAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 GoError cCanonicalAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
+GoError cContractExternal_cgo(api_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 // and querier
 GoError cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 
@@ -313,6 +315,7 @@ func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *cu64, key *C.Unma
 var api_vtable = C.GoApi_vtable{
 	humanize_address:     (C.humanize_address_fn)(C.cHumanAddress_cgo),
 	canonicalize_address: (C.canonicalize_address_fn)(C.cCanonicalAddress_cgo),
+	contract_external:    (C.contract_external_fn)(C.cContractExternal_cgo),
 }
 
 // contract: original pointer/struct referenced must live longer than C.GoApi struct
@@ -376,6 +379,47 @@ func cCanonicalAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector,
 		panic(fmt.Sprintf("`api.CanonicalAddress()` returned an empty string for %q", s))
 	}
 	*dest = newUnmanagedVector(c)
+	return C.GoError_None
+}
+
+//export cContractExternal
+func cContractExternal(ptr *C.api_t, gasLimit cu64, usedGas *cu64, request C.U8SliceView, result *C.UnmanagedVector, errOut *C.UnmanagedVector) (ret C.GoError) {
+	defer recoverPanic(&ret)
+
+	if ptr == nil || usedGas == nil || result == nil || errOut == nil {
+		// we received an invalid pointer
+		return C.GoError_BadArgument
+	}
+	if !(*result).is_none || !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
+	}
+
+	api := *(*types.GoAPI)(unsafe.Pointer(ptr))
+	binRequest := copyU8Slice(request)
+
+	var req types.ContractCreateRequest
+	err := json.Unmarshal(binRequest, &req)
+	if err != nil {
+		// store the actual error message in the return buffer
+		*errOut = newUnmanagedVector([]byte(err.Error()))
+		return C.GoError_User
+	}
+
+	if api.Contract == nil {
+		panic("`api.ContractExternal()` can not be supported in this case.")
+	}
+	bz, cost, err := api.Contract(req, uint64(gasLimit))
+	*usedGas = (cu64)(cost)
+
+	if err != nil {
+		// store the actual error message in the return buffer
+		*errOut = newUnmanagedVector([]byte(err.Error()))
+		return C.GoError_User
+	}
+	if len(bz) == 0 {
+		panic(fmt.Sprintf("`api.ContractExternal()` returned an empty string for %q", string(binRequest)))
+	}
+	*result = newUnmanagedVector([]byte(bz))
 	return C.GoError_None
 }
 
