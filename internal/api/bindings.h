@@ -354,6 +354,15 @@ struct cache_t *init_cache(struct ByteSliceView data_dir,
                            uint32_t instance_memory_limit,
                            struct UnmanagedVector *error_msg);
 
+void update_cur_block_num(struct cache_t *cache,
+                          uint64_t cur_block_num,
+                          struct UnmanagedVector *error_msg);
+
+void update_milestone(struct cache_t *cache,
+                      struct ByteSliceView milestone,
+                      uint64_t block_num,
+                      struct UnmanagedVector *error_msg);
+
 struct UnmanagedVector save_wasm(struct cache_t *cache,
                                  struct ByteSliceView wasm,
                                  bool unchecked,
