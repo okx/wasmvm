@@ -1,6 +1,6 @@
 [package]
 name = "wasmvm"
-version = "1.2.4"
+version = "1.3.0"
 publish = false
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2021"
@@ -16,11 +16,6 @@ crate-type = ["cdylib", "rlib"]
 # the example is to allow us to compile a muslc static lib with the same codebase as we compile the
 # normal dynamic libs (best workaround I could find to override crate-type on the command line)
 [[example]]
-name = "muslc"
-path = "src/lib.rs"
-crate-type = ["staticlib"]
-
-[[example]]
 name = "wasmvmstatic"
 path = "src/examples/wasmvmstatic.rs"
 crate-type = ["staticlib"]
@@ -31,10 +26,8 @@ default = []
 backtraces = []
 
 [dependencies]
-#cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v1.2.6", features = ["staking", "stargate", "iterator"] }
-#cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v1.2.6", features = ["staking", "stargate", "iterator"] }
-cosmwasm-std = { git = "https://github.com/okx/cosmwasm.git", branch = "lyh/cross-call-v126", features = ["staking", "stargate", "iterator"] }
-cosmwasm-vm = { git = "https://github.com/okx/cosmwasm.git", branch = "lyh/cross-call-v126", features = ["staking", "stargate", "iterator"] }
+cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v1.3.0", features = ["staking", "stargate", "iterator"] }
+cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v1.3.0", features = ["staking", "stargate", "iterator"] }
 errno = "0.2"
 serde_json = "1.0.91"
 thiserror = "1.0.38"
