@@ -384,3 +384,49 @@ impl BackendApi for GoApi {
         (result, ret_gas_uesd)
     }
 }
+
+pub fn do_call<A: BackendApi, S: Storage, Q: Querier>(
+    env: &Environment<A, S, Q>,
+    benv: &Env,
+    storage: GoStorage,
+    querier: GoQuerier,
+    api: GoApi,
+    cache: *mut cache_t,
+    info: &MessageInfo,
+    call_msg: &[u8],
+    checksum: [u8; 32],
+    gas_limit: u64,
+    delegate_contract_addr: Addr,
+) -> (VmResult<Vec<u8>>, GasInfo) {
+    let backend = Backend {
+        api: api,
+        storage: storage,
+        querier: querier
+    };
+
+    let ins_options = InstanceOptions{
+        gas_limit: gas_limit,
+        print_debug: env.print_debug,
+    };
+
+    let cache = unsafe { &mut *(cache as *mut Cache<GoApi, GoStorage, GoQuerier>) };
+    let param = InternalCallParam {
+        call_depth: env.call_depth + 1,
+        sender_addr: info.sender.clone(),
+        delegate_contract_addr: delegate_contract_addr
+    };
+    let new_instance = cache.get_instance_ex(&Checksum::from(checksum), backend, ins_options, param);
+    match new_instance {
+        Ok(mut ins) => {
+            let benv = to_vec(benv).unwrap();
+            let info = to_vec(info).unwrap();
+            let result = call_execute_raw(&mut ins, &benv, &info, call_msg);
+            let gas_rep = ins.create_gas_report();
+            ins.recycle();
+            (result, GasInfo::new(gas_rep.used_internally, gas_rep.used_externally))
+        }
+        Err(err) => {
+            (Err(err), GasInfo::with_cost(0))
+        }
+    }
+}
