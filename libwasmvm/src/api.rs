@@ -35,6 +35,14 @@ pub struct GoApi_vtable {
         *mut UnmanagedVector, // error message output
         *mut u64,
     ) -> i32,
+    pub contract_external: extern "C" fn(
+        *const api_t,
+        u64,
+        *mut u64,
+        U8SliceView,
+        *mut UnmanagedVector, // result output
+        *mut UnmanagedVector, // error message output
+    ) -> i32,
     pub get_call_info: extern "C" fn (
         *const api_t,
         *mut u64,       // used gas
@@ -140,6 +148,42 @@ impl BackendApi for GoApi {
         let result = output
             .ok_or_else(|| BackendError::unknown("Unset output"))
             .and_then(|human_data| String::from_utf8(human_data).map_err(BackendError::from));
+        (result, gas_info)
+    }
+
+    fn new_contract(
+        &self,
+        request: &[u8],
+        gas_limit: u64,
+    ) -> BackendResult<String> {
+        let mut output = UnmanagedVector::default();
+        let mut error_msg = UnmanagedVector::default();
+        let mut used_gas = 0_u64;
+        let go_error: GoError = (self.vtable.contract_external)(
+            self.state,
+            gas_limit,
+            &mut used_gas as *mut u64,
+            U8SliceView::new(Some(request)),
+            &mut output as *mut UnmanagedVector,
+            &mut error_msg as *mut UnmanagedVector,
+        )
+            .into();
+        // We destruct the UnmanagedVector here, no matter if we need the data.
+        let output = output.consume();
+
+        let gas_info = GasInfo::with_externally_used(used_gas);
+
+        // return complete error message (reading from buffer for GoError::Other)
+        let default = || format!("Failed to new contract: {}", String::from_utf8_lossy(request));
+        unsafe {
+            if let Err(err) = go_error.into_result(error_msg, default) {
+                return (Err(err), gas_info);
+            }
+        }
+
+        let result = output
+            .ok_or_else(|| BackendError::unknown("Unset output"))
+            .and_then(|addr_data| String::from_utf8(addr_data).map_err(BackendError::from));
         (result, gas_info)
     }
 
@@ -338,51 +382,5 @@ impl BackendApi for GoApi {
         (self.vtable.release)(call_id);
 
         (result, ret_gas_uesd)
-    }
-}
-
-pub fn do_call<A: BackendApi, S: Storage, Q: Querier>(
-    env: &Environment<A, S, Q>,
-    benv: &Env,
-    storage: GoStorage,
-    querier: GoQuerier,
-    api: GoApi,
-    cache: *mut cache_t,
-    info: &MessageInfo,
-    call_msg: &[u8],
-    checksum: [u8; 32],
-    gas_limit: u64,
-    delegate_contract_addr: Addr,
-) -> (VmResult<Vec<u8>>, GasInfo) {
-    let backend = Backend {
-        api: api,
-        storage: storage,
-        querier: querier
-    };
-
-    let ins_options = InstanceOptions{
-        gas_limit: gas_limit,
-        print_debug: env.print_debug,
-    };
-
-    let cache = unsafe { &mut *(cache as *mut Cache<GoApi, GoStorage, GoQuerier>) };
-    let param = InternalCallParam {
-        call_depth: env.call_depth + 1,
-        sender_addr: info.sender.clone(),
-        delegate_contract_addr: delegate_contract_addr
-    };
-    let new_instance = cache.get_instance_ex(&Checksum::from(checksum), backend, ins_options, param);
-    match new_instance {
-        Ok(mut ins) => {
-            let benv = to_vec(benv).unwrap();
-            let info = to_vec(info).unwrap();
-            let result = call_execute_raw(&mut ins, &benv, &info, call_msg);
-            let gas_rep = ins.create_gas_report();
-            ins.recycle();
-            (result, GasInfo::new(gas_rep.used_internally, gas_rep.used_externally))
-        }
-        Err(err) => {
-            (Err(err), GasInfo::with_cost(0))
-        }
     }
 }
