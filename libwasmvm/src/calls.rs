@@ -7,8 +7,11 @@ use cosmwasm_vm::{
     call_execute_raw, call_ibc_channel_close_raw, call_ibc_channel_connect_raw,
     call_ibc_channel_open_raw, call_ibc_packet_ack_raw, call_ibc_packet_receive_raw,
     call_ibc_packet_timeout_raw, call_instantiate_raw, call_migrate_raw, call_query_raw,
-    call_reply_raw, call_sudo_raw, Backend, Cache, Checksum, Instance, InstanceOptions, VmResult,
+    call_reply_raw, call_sudo_raw, Backend, Cache, Checksum, Instance, InstanceOptions,
+    VmResult, InternalCallParam,
 };
+
+use cosmwasm_std::{Env, MessageInfo};
 
 use crate::api::GoApi;
 use crate::args::{ARG1, ARG2, ARG3, CACHE_ARG, CHECKSUM_ARG, GAS_USED_ARG};
@@ -555,7 +558,16 @@ fn do_call_3_args(
         gas_limit,
         print_debug,
     };
-    let mut instance = cache.get_instance(&checksum, backend, options)?;
+
+    let senv: Env = serde_json::from_str(std::str::from_utf8(arg1.clone()).unwrap()).unwrap();
+    let sinfo: MessageInfo = serde_json::from_str(std::str::from_utf8(arg2.clone()).unwrap()).unwrap();
+    let param = InternalCallParam {
+        call_depth: 1,
+        sender_addr: sinfo.sender,
+        delegate_contract_addr: senv.contract.address
+    };
+    let mut instance = cache.get_instance_ex(&checksum, backend, options, param)?;
+
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = vm_fn(&mut instance, arg1, arg2, arg3);
     *gas_used = instance.create_gas_report().used_internally;

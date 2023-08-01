@@ -41,6 +41,10 @@ func (vm *VM) Cleanup() {
 	api.ReleaseCache(vm.cache)
 }
 
+func (vm *VM) GetCache() api.Cache {
+	return vm.cache
+}
+
 func (vm *VM) UpdateCurBlockNum(blockNum uint64) error {
 	return api.UpdateCurBlockNum(vm.cache, blockNum)
 }

@@ -15,6 +15,10 @@ GoError cNext(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Unman
 GoError cHumanAddress(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 GoError cCanonicalAddress(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 GoError cContractExternal(api_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
+GoError cGetCallInfo(api_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, uint64_t *call_id, UnmanagedVector *errOut);
+GoError cGetWasmInfo(cache_t **resCache_t, UnmanagedVector *errOut);
+GoError cRelease(uint64_t call_id);
+GoError cTransferCoins(api_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView caller, U8SliceView coins, UnmanagedVector *errOut);
 // imports (querier)
 GoError cQueryExternal(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 
@@ -48,10 +52,27 @@ GoError cContractExternal_cgo(api_t *ptr, uint64_t gas_limit, uint64_t *used_gas
     return cContractExternal(ptr, gas_limit, used_gas, request, result, errOut);
 }
 
+GoError cGetCallInfo_cgo(api_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView storeAddress, UnmanagedVector *resCodeHash, Db **resStore, GoQuerier **resQuerier, uint64_t *call_id, UnmanagedVector *errOut) {
+    return cGetCallInfo(ptr, used_gas, contractAddress, storeAddress, resCodeHash, resStore, resQuerier, call_id, errOut);
+}
+
+GoError cGetWasmInfo_cgo(cache_t **resCache_t, UnmanagedVector *errOut) {
+    return cGetWasmInfo(resCache_t, errOut);
+}
+
+GoError cRelease_cgo(uint64_t call_id) {
+   return cRelease(call_id);
+}
+
+GoError cTransferCoins_cgo(api_t *ptr, uint64_t *used_gas, U8SliceView contractAddress, U8SliceView caller, U8SliceView coins, UnmanagedVector *errOut) {
+   return cTransferCoins(ptr, used_gas, contractAddress, caller, coins, errOut);
+}
+
 // Gateway functions (querier)
 GoError cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut) {
     return cQueryExternal(ptr, gas_limit, used_gas, request, result, errOut);
 }
+
 */
 import "C"
 

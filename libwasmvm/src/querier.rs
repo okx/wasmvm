@@ -1,5 +1,5 @@
 use cosmwasm_std::{Binary, ContractResult, SystemError, SystemResult};
-use cosmwasm_vm::{BackendResult, GasInfo, Querier};
+use cosmwasm_vm::{ BackendResult, GasInfo, Querier};
 
 use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
