@@ -93,10 +93,10 @@ pub extern "C" fn update_cur_block_num(
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
             do_update_cur_block_num(c, cur_block_num)
         }))
-            .unwrap_or_else(|err| {
-                eprintln!("Panic in do_set_cur_block_num: {:?}", err);
-                Err(Error::panic())
-            }),
+        .unwrap_or_else(|err| {
+            eprintln!("Panic in do_set_cur_block_num: {:?}", err);
+            Err(Error::panic())
+        }),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
     handle_c_error_default(r, error_msg)
@@ -121,10 +121,10 @@ pub extern "C" fn update_milestone(
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
             do_update_milestone(c, milestone, block_num)
         }))
-            .unwrap_or_else(|err| {
-                eprintln!("Panic in update_milestone: {:?}", err);
-                Err(Error::panic())
-            }),
+        .unwrap_or_else(|err| {
+            eprintln!("Panic in update_milestone: {:?}", err);
+            Err(Error::panic())
+        }),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
     handle_c_error_default(r, error_msg)

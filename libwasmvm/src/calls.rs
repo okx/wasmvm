@@ -8,7 +8,7 @@ use cosmwasm_vm::{
     call_ibc_channel_open_raw, call_ibc_packet_ack_raw, call_ibc_packet_receive_raw,
     call_ibc_packet_timeout_raw, call_instantiate_raw, call_migrate_raw, call_query_raw,
     call_reply_raw, call_sudo_raw, Backend, Cache, Checksum, Instance, InstanceOptions,
-    VmResult, InternalCallParam,
+    InternalCallParam, VmResult,
 };
 
 use cosmwasm_std::{Env, MessageInfo};
@@ -46,7 +46,7 @@ pub extern "C" fn instantiate(
     error_msg: Option<&mut UnmanagedVector>,
     write_cost_flat: u64,
     write_cost_per_byte: u64,
-    delete_cost:u64,
+    delete_cost: u64,
     gas_mul: u64,
 ) -> UnmanagedVector {
     call_3_args(
@@ -86,7 +86,7 @@ pub extern "C" fn execute(
     error_msg: Option<&mut UnmanagedVector>,
     write_cost_flat: u64,
     write_cost_per_byte: u64,
-    delete_cost:u64,
+    delete_cost: u64,
     gas_mul: u64,
 ) -> UnmanagedVector {
     call_3_args(
@@ -483,7 +483,7 @@ fn do_call_2_args(
 
     let write_cost_flat: u64 = 0;
     let write_cost_per_byte: u64 = 0;
-    let delete_cost:u64 = 0;
+    let delete_cost: u64 = 0;
     let gas_mul: u64 = 0;
     let backend = into_backend(db, api, querier);
     let options = InstanceOptions {
@@ -528,7 +528,7 @@ fn call_3_args(
     error_msg: Option<&mut UnmanagedVector>,
     write_cost_flat: u64,
     write_cost_per_byte: u64,
-    delete_cost:u64,
+    delete_cost: u64,
     gas_mul: u64,
 ) -> UnmanagedVector {
     let r = match to_cache(cache) {
@@ -577,7 +577,7 @@ fn do_call_3_args(
     gas_used: Option<&mut u64>,
     write_cost_flat: u64,
     write_cost_per_byte: u64,
-    delete_cost:u64,
+    delete_cost: u64,
     gas_mul: u64,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
@@ -600,11 +600,12 @@ fn do_call_3_args(
     };
 
     let senv: Env = serde_json::from_str(std::str::from_utf8(arg1.clone()).unwrap()).unwrap();
-    let sinfo: MessageInfo = serde_json::from_str(std::str::from_utf8(arg2.clone()).unwrap()).unwrap();
+    let sinfo: MessageInfo =
+        serde_json::from_str(std::str::from_utf8(arg2.clone()).unwrap()).unwrap();
     let param = InternalCallParam {
         call_depth: 1,
         sender_addr: sinfo.sender,
-        delegate_contract_addr: senv.contract.address
+        delegate_contract_addr: senv.contract.address,
     };
     let mut instance = cache.get_instance_ex(&checksum, backend, options, param)?;
 
