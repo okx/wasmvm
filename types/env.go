@@ -48,3 +48,10 @@ type GasInfo struct {
 	DeleteCost       uint64 `json:"delete_cost"`
 	GasMultiplier    uint64 `json:"gas_multiplier"`
 }
+
+var DefaultGasInfo = GasInfo{
+	WriteCostFlat:    2000,
+	WriteCostPerByte: 30,
+	DeleteCost:       1000,
+	GasMultiplier:    38000000,
+}
