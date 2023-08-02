@@ -407,6 +407,10 @@ pub fn do_call<A: BackendApi, S: Storage, Q: Querier>(
     let ins_options = InstanceOptions{
         gas_limit: gas_limit,
         print_debug: env.print_debug,
+        write_cost_flat: env.gas_config_info.write_cost_flat,
+        write_cost_per_byte: env.gas_config_info.write_cost_per_byte,
+        delete_cost: env.gas_config_info.delete_cost,
+        gas_mul: env.gas_config_info.gas_mul,
     };
 
     let cache = unsafe { &mut *(cache as *mut Cache<GoApi, GoStorage, GoQuerier>) };
