@@ -171,10 +171,9 @@ pub fn mock_do_call<A: BackendApi + 'static, S: Storage + 'static, Q: Querier + 
             let benv = to_vec(benv).unwrap();
             let info = to_vec(info).unwrap();
             let result = call_execute_raw(&mut ins, &benv, &info, call_msg);
-            let gas_used = gas_limit - ins.get_gas_left();
-            let gas_externally_used = ins.get_externally_used_gas();
-            let gas_cost       = gas_used - gas_externally_used;
-            (result, GasInfo::new(gas_cost, gas_externally_used))
+            let gas_rep = ins.create_gas_report();
+            ins.recycle();
+            (result, GasInfo::new(gas_rep.used_internally, gas_rep.used_externally))
         }
         Err(err) => {
             (Err(err), GasInfo::with_cost(0))
