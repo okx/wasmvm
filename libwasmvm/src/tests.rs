@@ -1,12 +1,15 @@
 #![cfg(test)]
 
-use std::env;
 use cosmwasm_std::{Addr, Env, MessageInfo};
+use std::env;
 use tempfile::TempDir;
 
 use cosmwasm_vm::testing::{mock_backend, mock_env, mock_info, mock_instance_with_gas_limit};
-use cosmwasm_vm::{call_execute_raw, call_instantiate_raw, capabilities_from_csv, to_vec, Cache, CacheOptions, InstanceOptions, Size,
-                  Checksum, Storage, BackendApi, Querier, GasInfo, VmResult, InternalCallParam, Backend};
+use cosmwasm_vm::{
+    call_execute_raw, call_instantiate_raw, capabilities_from_csv, to_vec, Backend, BackendApi,
+    Cache, CacheOptions, Checksum, GasInfo, InstanceOptions, InternalCallParam, Querier, Size,
+    Storage, VmResult,
+};
 
 static CYBERPUNK: &[u8] = include_bytes!("../../testdata/cyberpunk.wasm");
 const PRINT_DEBUG: bool = false;
@@ -127,13 +130,23 @@ fn handle_do_call() {
 
     // execute
     let raw_msg = br#"{"cpu_loop":{}}"#;
-    let data  = Vec::from(checksum);
+    let data = Vec::from(checksum);
     let mut byte_array: [u8; 32] = [0; 32];
     byte_array.copy_from_slice(&data[..32]);
 
-
-    let (res, gas_info) = mock_do_call(&env, backend, &cache , &info, raw_msg, byte_array,
-             options.gas_limit, options.print_debug, 1, cosmwasm_std::Addr::unchecked(""), cosmwasm_std::Addr::unchecked(""));
+    let (res, gas_info) = mock_do_call(
+        &env,
+        backend,
+        &cache,
+        &info,
+        raw_msg,
+        byte_array,
+        options.gas_limit,
+        options.print_debug,
+        1,
+        cosmwasm_std::Addr::unchecked(""),
+        cosmwasm_std::Addr::unchecked(""),
+    );
     assert!(res.is_err());
     println!("the gas_info is {:?}", gas_info);
 }
@@ -151,7 +164,7 @@ pub fn mock_do_call<A: BackendApi + 'static, S: Storage + 'static, Q: Querier + 
     sender_addr: Addr,
     delegate_contract_addr: Addr,
 ) -> (VmResult<Vec<u8>>, GasInfo) {
-    let ins_options = InstanceOptions{
+    let ins_options = InstanceOptions {
         gas_limit: gas_limit,
         print_debug: print_debug,
         write_cost_flat: 2000,
@@ -163,9 +176,10 @@ pub fn mock_do_call<A: BackendApi + 'static, S: Storage + 'static, Q: Querier + 
     let param = InternalCallParam {
         call_depth: call_depth + 1,
         sender_addr: sender_addr,
-        delegate_contract_addr: delegate_contract_addr
+        delegate_contract_addr: delegate_contract_addr,
     };
-    let new_instance = cache.get_instance_ex(&Checksum::from(checksum), backend, ins_options, param);
+    let new_instance =
+        cache.get_instance_ex(&Checksum::from(checksum), backend, ins_options, param);
     match new_instance {
         Ok(mut ins) => {
             let benv = to_vec(benv).unwrap();
@@ -173,10 +187,11 @@ pub fn mock_do_call<A: BackendApi + 'static, S: Storage + 'static, Q: Querier + 
             let result = call_execute_raw(&mut ins, &benv, &info, call_msg);
             let gas_rep = ins.create_gas_report();
             ins.recycle();
-            (result, GasInfo::new(gas_rep.used_internally, gas_rep.used_externally))
+            (
+                result,
+                GasInfo::new(gas_rep.used_internally, gas_rep.used_externally),
+            )
         }
-        Err(err) => {
-            (Err(err), GasInfo::with_cost(0))
-        }
+        Err(err) => (Err(err), GasInfo::with_cost(0)),
     }
 }
