@@ -28,8 +28,8 @@ backtraces = []
 [dependencies]
 #cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v1.3.0", features = ["staking", "stargate", "iterator"] }
 #cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v1.3.0", features = ["staking", "stargate", "iterator"] }
-cosmwasm-std = { git = "https://github.com/okx/cosmwasm.git", branch = "lyh/add_milestone_for_upgrade", features = ["staking", "stargate", "iterator"] }
-cosmwasm-vm = { git = "https://github.com/okx/cosmwasm.git", branch = "lyh/add_milestone_for_upgrade", features = ["staking", "stargate", "iterator"] }
+cosmwasm-std = { git = "https://github.com/okx/cosmwasm.git", branch = "wasm40", features = ["staking", "stargate", "iterator"] }
+cosmwasm-vm = { git = "https://github.com/okx/cosmwasm.git", branch = "wasm40", features = ["staking", "stargate", "iterator"] }
 errno = "0.2"
 serde_json = "1.0.91"
 thiserror = "1.0.38"
